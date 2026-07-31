@@ -7,6 +7,7 @@ use App\Http\Controllers\SchoolSettingController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\WorkScheduleController;
 use App\Http\Controllers\ShiftAssignmentController;
+use App\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Route;
 
 // --------------------------------------------------------------------------
@@ -36,11 +37,21 @@ Route::middleware('auth')->group(function () {
 // 3. Admin & SuperAdmin Routes (Khusus Management)
 // --------------------------------------------------------------------------
 Route::middleware(['auth', 'role:super_admin,admin'])->group(function () {
-    // Manajemen Guru
+    
+    // =========================================================================
+    // MANAJEMEN GURU
+    // =========================================================================
     Route::get('/teachers', [TeacherController::class, 'index'])->name('teachers.index');
     Route::get('/teachers/create', [TeacherController::class, 'create'])->name('teachers.create');
     Route::post('/teachers', [TeacherController::class, 'store'])->name('teachers.store');
+
+    // 1. ROUTE STATIS (Harus di Atas Parameter {id})
+    Route::get('/teachers/print-all-cards', [TeacherController::class, 'printAllCards'])->name('teachers.print-all-cards');
+
+    // 2. ROUTE DINAMIS (Memakai {id}, Taruh di Bawah Route Statis)
+    Route::get('/teachers/{id}/print-card', [TeacherController::class, 'printCard'])->name('teachers.print-card');
     Route::post('/teachers/{id}/regenerate-qr', [TeacherController::class, 'regenerateQr'])->name('teachers.regenerate-qr');
+    // =========================================================================
 
     // Master Jadwal Kerja
     Route::resource('work-schedules', WorkScheduleController::class)->only(['index', 'store', 'update', 'destroy']);
@@ -53,4 +64,8 @@ Route::middleware(['auth', 'role:super_admin,admin'])->group(function () {
     // Pengaturan Lokasi Sekolah
     Route::get('/settings/school', [SchoolSettingController::class, 'index'])->name('settings.school.index');
     Route::put('/settings/school', [SchoolSettingController::class, 'update'])->name('settings.school.update');
+
+    // Laporan Presensi
+    Route::get('/reports/attendance', [ReportController::class, 'index'])->name('reports.attendance');
+    Route::get('/reports/attendance/print', [ReportController::class, 'print'])->name('reports.attendance.print');
 });

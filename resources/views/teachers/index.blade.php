@@ -11,6 +11,10 @@
             <a href="{{ route('teachers.create') }}" class="btn btn-primary btn-sm">
                 <i class="fas fa-plus me-1"></i> Tambah Guru Baru
             </a>
+
+            <a href="{{ route('teachers.print-all-cards') }}" target="_blank" class="btn btn-info btn-sm">
+                <i class="fas fa-print me-1"></i> Cetak Semua ID Card
+            </a>
         </div>
         
     </div>
@@ -59,12 +63,20 @@
                                 @endif
                             </td>
                             <td class="text-center">
-                                <form action="{{ route('teachers.regenerate-qr', $teacher->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin memperbarui QR Code ini? QR Code lama tidak akan berlaku lagi.');">
-                                    @csrf
-                                    <button type="submit" class="btn btn-warning btn-sm" title="Regenerate QR Code">
-                                        <i class="fas fa-sync-alt"></i> Reset QR
-                                    </button>
-                                </form>
+                                <div class="btn-group" role="group">
+                                    <!-- Tombol Cetak Kartu Per Guru -->
+                                    <a href="{{ route('teachers.print-card', $teacher->id) }}" target="_blank" class="btn btn-sm btn-outline-info mr-2" title="Cetak ID Card">
+                                        <i class="fas fa-id-card"></i>
+                                    </a>
+
+                                    <!-- Tombol Regenerate QR -->
+                                    <form action="{{ route('teachers.regenerate-qr', $teacher->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Regenerate QR Code baru?')">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-outline-warning" title="Regenerate QR">
+                                            <i class="fas fa-sync"></i>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
 

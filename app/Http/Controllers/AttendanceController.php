@@ -3,12 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\AttendanceRecord;
+use App\Models\ShiftAssignment;
 use App\Models\QrCode;
 use App\Models\SchoolSetting;
 use App\Models\Teacher;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class AttendanceController extends Controller
 {
@@ -52,9 +53,7 @@ class AttendanceController extends Controller
             ], 422);
         }
 
-        // =========================================================================
-        // 2. CEK VALIDITAS QR CODE ATAU NIP (PERUBAHAN DI SINI)
-        // =========================================================================
+        // 2. CEK VALIDITAS QR CODE ATAU NIP GURU
         $qr = QrCode::where('code', $request->qr_code)->where('is_active', true)->first();
 
         if (!$qr) {
@@ -71,9 +70,8 @@ class AttendanceController extends Controller
                 'message' => 'Kode QR atau NIP tidak ditemukan / tidak aktif!'
             ], 404);
         }
-        // =========================================================================
 
-        $teacher = Teacher::with('workSchedule')->find($qr->teacher_id);
+        $teacher = Teacher::find($qr->teacher_id);
 
         if (!$teacher || !$teacher->is_active) {
             return response()->json([
@@ -86,40 +84,46 @@ class AttendanceController extends Controller
         $now = Carbon::now();
         $currentTime = $now->format('H:i:s');
 
-        // 3. Cek Data Presensi Hari Ini
+        // 3. Cari Shift Assignment Guru KHUSUS HARI INI
+        $shiftAssignment = ShiftAssignment::with('workSchedule')
+            ->where('teacher_id', $teacher->id)
+            ->where('date', $today)
+            ->first();
+
+        if (!$shiftAssignment || !$shiftAssignment->workSchedule) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => "Guru {$teacher->full_name} belum memiliki jadwal shift untuk hari ini!"
+            ], 400);
+        }
+
+        $schedule = $shiftAssignment->workSchedule;
+
+        // 4. Cek Data Presensi Hari Ini
         $attendance = AttendanceRecord::where('teacher_id', $teacher->id)
             ->where('date', $today)
             ->first();
 
-        // Ambil Shift Assignment guru (sesuaikan relasinya)
-        $shiftAssignment = $teacher->shiftAssignments()->first(); 
-
-        if (!$shiftAssignment) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Guru belum memiliki jadwal shift kerja!'
-            ], 400);
-        }
-
-        // JIKA BELUM PRESENSI MASUK -> CATAT MASUK
+        // =========================================================================
+        // SKENARIO A: BELUM PRESENSI MASUK -> CATAT MASUK (CHECK-IN)
+        // =========================================================================
         if (!$attendance) {
-            $schedule = $teacher->workSchedule;
-            $status = 'present';
+            // Cek keterlambatan berdasarkan jam masuk di WorkSchedule
+            $status = ($currentTime > $schedule->check_in_time) ? 'late' : 'present';
 
-            if ($schedule && $currentTime > $schedule->check_in_time) {
-                $status = 'late';
-            }
-
-            // Gunakan Model AttendanceRecord
             $attendance = AttendanceRecord::create([
+                'id'                  => Str::uuid(),
                 'teacher_id'          => $teacher->id,
-                'shift_assignment_id' => $shiftAssignment->id, // wajib ada
+                'shift_assignment_id' => $shiftAssignment->id,
+                'work_schedule_id'    => $schedule->id,
                 'date'                => $today,
-                'check_in_time'       => $now, // Carbon::now() untuk mengisi dateTime
+                'check_in_time'       => $currentTime,
                 'status'              => $status,
+                'latitude'            => $request->latitude,
+                'longitude'           => $request->longitude,
             ]);
 
-            $statusText = $status === 'late' ? 'Terlambat' : 'Tepat Waktu';
+            $statusText = ($status === 'late') ? 'Terlambat' : 'Tepat Waktu';
 
             return response()->json([
                 'status'   => 'success',
@@ -131,26 +135,12 @@ class AttendanceController extends Controller
             ]);
         }
 
-// JIKA SUDAH PRESENSI MASUK, TAPI BELUM PULANG -> CATAT PULANG
-if (is_null($attendance->check_out_time)) {
-    $attendance->update([
-        'check_out_time' => $now, // Carbon::now() untuk mengisi dateTime
-    ]);
-
-    return response()->json([
-        'status'   => 'success',
-        'type'     => 'check_out',
-        'message'  => 'Presensi PULANG Berhasil!',
-        'teacher'  => $teacher->full_name,
-        'time'     => $currentTime,
-        'distance' => round($distance) . ' meter'
-    ]);
-}
-
-        // JIKA SUDAH PRESENSI MASUK, TAPI BELUM PULANG -> CATAT PULANG
+        // =========================================================================
+        // SKENARIO B: SUDAH MASUK, TAPI BELUM PULANG -> CATAT PULANG (CHECK-OUT)
+        // =========================================================================
         if (is_null($attendance->check_out_time)) {
             $attendance->update([
-                'check_out_time'     => $currentTime,
+                'check_out_time'      => $currentTime,
                 'check_out_latitude'  => $request->latitude,
                 'check_out_longitude' => $request->longitude,
             ]);
@@ -165,7 +155,9 @@ if (is_null($attendance->check_out_time)) {
             ]);
         }
 
-        // JIKA SUDAH PRESENSI MASUK & PULANG HARI INI
+        // =========================================================================
+        // SKENARIO C: SUDAH PRESENSI MASUK & PULANG HARI INI
+        // =========================================================================
         return response()->json([
             'status'  => 'warning',
             'message' => 'Anda sudah melakukan presensi masuk dan pulang untuk hari ini.'

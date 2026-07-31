@@ -70,6 +70,30 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <!-- AdminLTE App -->
 <script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    // Notifikasi SweetAlert jika validasi form gagal
+    @if($errors->any())
+        Swal.fire({
+            icon: 'warning',
+            title: 'Periksa Kembali Inputan!',
+            text: 'Terdapat data yang belum valid atau sudah terdaftar di sistem.',
+            confirmButtonColor: '#e67e22'
+        });
+    @endif
+
+    // Notifikasi SweetAlert jika ada error sistem/session error
+    @if(session('error'))
+        Swal.fire({
+            icon: 'error',
+            title: 'Terjadi Kesalahan!',
+            text: "{{ session('error') }}",
+            confirmButtonColor: '#e74c3c'
+        });
+    @endif
+</script>
 
 @stack('scripts')
 </body>

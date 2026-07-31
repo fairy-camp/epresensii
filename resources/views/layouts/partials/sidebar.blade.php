@@ -55,8 +55,8 @@
                     <li class="nav-header">REKAP & PENGATURAN</li>
 
                     <li class="nav-item">
-                        <a href="#" class="nav-link">
-                            <i class="nav-icon fas fa-file-invoice"></i>
+                        <a href="{{ route('reports.attendance') }}" class="nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}">
+                            <i class="nav-icon fas fa-file-alt"></i>
                             <p>Laporan Presensi</p>
                         </a>
                     </li>
