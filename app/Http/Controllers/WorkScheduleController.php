@@ -26,6 +26,12 @@ class WorkScheduleController extends Controller
         return redirect()->back()->with('success', 'Jadwal kerja berhasil ditambahkan.');
     }
 
+    public function edit(WorkSchedule $workSchedule)
+    {
+        $schedules = WorkSchedule::latest()->get();
+        return view('work_schedules.index', compact('workSchedule', 'schedules'));
+    }
+
     public function update(Request $request, WorkSchedule $workSchedule)
     {
         $request->validate([
@@ -36,7 +42,7 @@ class WorkScheduleController extends Controller
 
         $workSchedule->update($request->only(['name', 'check_in_time', 'check_out_time']));
 
-        return redirect()->back()->with('success', 'Jadwal kerja berhasil diperbarui.');
+        return redirect()->route('work-schedules.index')->with('success', 'Jadwal kerja berhasil diperbarui.');
     }
 
     public function destroy(WorkSchedule $workSchedule)

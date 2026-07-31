@@ -85,11 +85,13 @@
 
 <!-- Tabel Data Rekapitulasi -->
 <div class="card shadow-sm">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <div class="card-header bg-white">
         <h5 class="card-title mb-0 font-weight-bold text-dark">Data Presensi</h5>
-        <a href="{{ route('reports.attendance.print', request()->all()) }}" target="_blank" class="btn btn-danger">
-            <i class="fas fa-file-pdf me-1"></i> Cetak / Save PDF
-        </a>
+        <div class="card-tools">
+            <a href="{{ route('reports.attendance.print', request()->all()) }}" target="_blank" class="btn btn-danger">
+                <i class="fas fa-file-pdf me-1"></i> Cetak / Save PDF
+            </a>
+        </div>
     </div>
     <div class="card-body p-0 table-responsive">
         <table class="table table-hover table-striped mb-0 align-middle">
