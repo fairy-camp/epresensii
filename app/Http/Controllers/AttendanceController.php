@@ -185,4 +185,47 @@ class AttendanceController extends Controller
 
         return $angle * $earthRadius;
     }
+
+    /**
+     * Menampilkan Riwayat Presensi Pribadi milik Guru yang sedang Login
+     */
+    public function myHistory(Request $request)
+    {
+        $user = auth()->user();
+
+        // 1. Cari data guru berdasarkan user_id saja
+        $teacher = Teacher::where('user_id', $user->id)->first();
+
+        // Jika akun user tidak/belum terhubung dengan data guru
+        if (!$teacher) {
+            return redirect()->back()->with('error', 'Data profil guru tidak terhubung dengan akun Anda. Silakan hubungi Admin.');
+        }
+
+        // 2. Filter Bulan & Tahun (Default: Bulan dan Tahun saat ini)
+        $month = $request->input('month', \Carbon\Carbon::now()->format('m'));
+        $year  = $request->input('year', \Carbon\Carbon::now()->format('Y'));
+
+        // 3. Ambil data presensi khusus guru tersebut
+        $attendances = AttendanceRecord::with('shiftAssignment.workSchedule')
+            ->where('teacher_id', $teacher->id)
+            ->whereMonth('date', $month)
+            ->whereYear('date', $year)
+            ->orderBy('date', 'desc')
+            ->get();
+
+        // 4. Hitung Ringkasan Statistik Kehadiran Guru
+        $totalPresent = $attendances->where('status', 'present')->count();
+        $totalLate    = $attendances->where('status', 'late')->count();
+        $totalRecords = $attendances->count();
+
+        return view('attendance.my_history', compact(
+            'teacher',
+            'attendances',
+            'month',
+            'year',
+            'totalPresent',
+            'totalLate',
+            'totalRecords'
+        ));
+    }
 }

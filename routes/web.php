@@ -24,48 +24,71 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-    // Dashboard
-    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/dashboard', [DashboardController::class, 'index']);
+    // ----------------------------------------------------------------------
+    // ROOT ROUTE (/) -> Dynamic Redirect Berdasarkan Role Pengguna
+    // ----------------------------------------------------------------------
+    Route::get('/', function () {
+        $role = auth()->user()->role ?? '';
 
-    // Scanner Presensi QR Code
-    Route::get('/attendance/scan', [AttendanceController::class, 'scanPage'])->name('attendance.scan');
-    Route::post('/attendance/process', [AttendanceController::class, 'processScan'])->name('attendance.process');
-});
+        return match ($role) {
+            'petugas' => redirect()->route('attendance.scan'),
+            'guru'    => redirect()->route('attendance.my-history'),
+            default   => redirect()->route('dashboard'),
+        };
+    });
 
-// --------------------------------------------------------------------------
-// 3. Admin & SuperAdmin Routes (Khusus Management)
-// --------------------------------------------------------------------------
-Route::middleware(['auth', 'role:super_admin,admin'])->group(function () {
-    
-    // =========================================================================
-    // MANAJEMEN GURU
-    // =========================================================================
-    Route::get('/teachers', [TeacherController::class, 'index'])->name('teachers.index');
-    Route::get('/teachers/create', [TeacherController::class, 'create'])->name('teachers.create');
-    Route::post('/teachers', [TeacherController::class, 'store'])->name('teachers.store');
+    // ----------------------------------------------------------------------
+    // A. Akses Scanner Presensi QR Code (Role: Super Admin, Admin, Petugas)
+    // ----------------------------------------------------------------------
+    Route::middleware('role:super_admin,admin,petugas')->group(function () {
+        Route::get('/attendance/scan', [AttendanceController::class, 'scanPage'])->name('attendance.scan');
+        Route::post('/attendance/process', [AttendanceController::class, 'processScan'])->name('attendance.process');
+    });
 
-    // 1. ROUTE STATIS (Harus di Atas Parameter {id})
-    Route::get('/teachers/print-all-cards', [TeacherController::class, 'printAllCards'])->name('teachers.print-all-cards');
+    // ----------------------------------------------------------------------
+    // B. Akses Dashboard, Laporan, & Data Guru Read-Only
+    //    (Role: Super Admin, Admin, Kepala Sekolah, Wakil Kurikulum)
+    // ----------------------------------------------------------------------
+    Route::middleware('role:super_admin,admin,kepala_sekolah,wakil_kurikulum')->group(function () {
+        // Dashboard
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // 2. ROUTE DINAMIS (Memakai {id}, Taruh di Bawah Route Statis)
-    Route::get('/teachers/{id}/print-card', [TeacherController::class, 'printCard'])->name('teachers.print-card');
-    Route::post('/teachers/{id}/regenerate-qr', [TeacherController::class, 'regenerateQr'])->name('teachers.regenerate-qr');
-    // =========================================================================
+        // Data Guru (Hanya Melihat Daftar / Read-Only)
+        Route::get('/teachers', [TeacherController::class, 'index'])->name('teachers.index');
 
-    // Master Jadwal Kerja
-    Route::resource('work-schedules', WorkScheduleController::class)->only(['index', 'store', 'update', 'destroy']);
+        // Laporan Presensi
+        Route::get('/reports/attendance', [ReportController::class, 'index'])->name('reports.attendance');
+        Route::get('/reports/attendance/print', [ReportController::class, 'print'])->name('reports.attendance.print');
+    });
 
-    // Penugasan Shift
-    Route::get('/shift-assignments', [ShiftAssignmentController::class, 'index'])->name('shift-assignments.index');
-    Route::post('/shift-assignments/bulk', [ShiftAssignmentController::class, 'storeBulk'])->name('shift-assignments.storeBulk');
-    Route::delete('/shift-assignments/{shiftAssignment}', [ShiftAssignmentController::class, 'destroy'])->name('shift-assignments.destroy');
+    // ----------------------------------------------------------------------
+    // C. Akses Manajemen Full, Master Data, & Cetak (Role: Super Admin, Admin)
+    // ----------------------------------------------------------------------
+    Route::middleware('role:super_admin,admin')->group(function () {
+        // Tambah Guru & Aksi Cetak ID Card / Regenerate QR
+        Route::get('/teachers/create', [TeacherController::class, 'create'])->name('teachers.create');
+        Route::post('/teachers', [TeacherController::class, 'store'])->name('teachers.store');
+        Route::get('/teachers/print-all-cards', [TeacherController::class, 'printAllCards'])->name('teachers.print-all-cards');
+        Route::get('/teachers/{id}/print-card', [TeacherController::class, 'printCard'])->name('teachers.print-card');
+        Route::post('/teachers/{id}/regenerate-qr', [TeacherController::class, 'regenerateQr'])->name('teachers.regenerate-qr');
 
-    // Pengaturan Lokasi Sekolah
-    Route::get('/settings/school', [SchoolSettingController::class, 'index'])->name('settings.school.index');
-    Route::put('/settings/school', [SchoolSettingController::class, 'update'])->name('settings.school.update');
+        // Master Jadwal Kerja
+        Route::resource('work-schedules', WorkScheduleController::class)->only(['index', 'store', 'update', 'destroy']);
 
-    // Laporan Presensi
-    Route::get('/reports/attendance', [ReportController::class, 'index'])->name('reports.attendance');
-    Route::get('/reports/attendance/print', [ReportController::class, 'print'])->name('reports.attendance.print');
+        // Penugasan Shift
+        Route::get('/shift-assignments', [ShiftAssignmentController::class, 'index'])->name('shift-assignments.index');
+        Route::post('/shift-assignments/bulk', [ShiftAssignmentController::class, 'storeBulk'])->name('shift-assignments.storeBulk');
+        Route::delete('/shift-assignments/{shiftAssignment}', [ShiftAssignmentController::class, 'destroy'])->name('shift-assignments.destroy');
+
+        // Pengaturan Lokasi Sekolah
+        Route::get('/settings/school', [SchoolSettingController::class, 'index'])->name('settings.school.index');
+        Route::put('/settings/school', [SchoolSettingController::class, 'update'])->name('settings.school.update');
+    });
+
+    // ----------------------------------------------------------------------
+    // D. Akses Khusus Guru (Role: Guru)
+    // ----------------------------------------------------------------------
+    Route::middleware('role:guru')->group(function () {
+        Route::get('/my-attendance-history', [AttendanceController::class, 'myHistory'])->name('attendance.my-history');
+    });
 });

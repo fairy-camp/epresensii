@@ -41,6 +41,7 @@ class TeacherController extends Controller
             'full_name'        => 'required|string|max:255',
             'email'            => 'required|email|unique:users,email',
             'password'         => 'required|string|min:6',
+            'role'             => 'required|in:guru,kepala_sekolah,wakil_kurikulum,petugas,admin',
             'nik'              => 'nullable|string|max:16|unique:teachers,nik',
             'nip'              => 'nullable|string|max:30|unique:teachers,nip',
             'gender'           => 'required|in:L,P',
@@ -48,11 +49,11 @@ class TeacherController extends Controller
             'work_schedule_id' => 'required|exists:work_schedules,id',
             'phone'            => 'nullable|string|max:20',
         ], [
-            // Pesan Error Kustom untuk Duplikasi & Mandatory Field
             'email.required'           => 'Alamat email wajib diisi.',
             'email.unique'             => 'Alamat email tersebut sudah terdaftar di sistem!',
             'password.required'        => 'Password login wajib diisi.',
             'password.min'             => 'Password minimal terdiri dari 6 karakter.',
+            'role.required'            => 'Silakan pilih role akses sistem untuk akun ini.',
             'nik.unique'               => 'NIK tersebut sudah terdaftar! Gunakan NIK yang lain.',
             'nip.unique'               => 'NIP tersebut sudah terdaftar! Gunakan NIP yang lain.',
             'full_name.required'       => 'Nama lengkap pegawai wajib diisi.',
@@ -63,11 +64,11 @@ class TeacherController extends Controller
 
         try {
             DB::transaction(function () use ($request) {
-                // 1. Buat Akun User
+                // 1. Buat Akun User (Role diambil dinamis dari request)
                 $user = User::create([
                     'email'     => $request->email,
                     'password'  => Hash::make($request->password),
-                    'role'      => 'guru',
+                    'role'      => $request->role, // <-- Menggunakan input role dinamis
                     'is_active' => true,
                 ]);
 
@@ -92,10 +93,9 @@ class TeacherController extends Controller
                 ]);
             });
 
-            return redirect()->route('teachers.index')->with('success', 'Data Guru dan QR Code berhasil dibuat!');
+            return redirect()->route('teachers.index')->with('success', 'Data Pegawai dan Akun berhasil dibuat!');
 
         } catch (\Exception $e) {
-            // Jika ada error database lainnya, kembalikan ke form beserta inputan lama
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Gagal menyimpan data: ' . $e->getMessage());

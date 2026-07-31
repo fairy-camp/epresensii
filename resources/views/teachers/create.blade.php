@@ -16,15 +16,30 @@
                     
                     <h6 class="fw-bold text-primary mb-3"><i class="fas fa-user-lock me-1"></i> Informasi Akun Login</h6>
                     <div class="row mb-4">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label class="form-label">Email <span class="text-danger">*</span></label>
-                            <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email') }}" required placeholder="contoh: guru@codepelita.sch.id">
+                            <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email') }}" required placeholder="contoh: kepsek@codepelita.sch.id">
                             @error('email') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
-                        <div class="col-md-6 mb-3">
+                        
+                        <div class="col-md-4 mb-3">
                             <label class="form-label">Password <span class="text-danger">*</span></label>
                             <input type="password" name="password" class="form-control @error('password') is-invalid @enderror" required placeholder="Minimal 6 karakter">
                             @error('password') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        </div>
+
+                        <!-- Tambahan Dropdown Role Akses Sistem -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Role Akses Sistem <span class="text-danger">*</span></label>
+                            <select name="role" class="form-select @error('role') is-invalid @enderror" required>
+                                <option value="">-- Pilih Role Akses --</option>
+                                <option value="guru" {{ old('role') == 'guru' ? 'selected' : '' }}>Guru</option>
+                                <option value="kepala_sekolah" {{ old('role') == 'kepala_sekolah' ? 'selected' : '' }}>Kepala Sekolah</option>
+                                <option value="wakil_kurikulum" {{ old('role') == 'wakil_kurikulum' ? 'selected' : '' }}>Wakil Kurikulum</option>
+                                <option value="petugas" {{ old('role') == 'petugas' ? 'selected' : '' }}>Petugas Presensi</option>
+                                <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Admin</option>
+                            </select>
+                            @error('role') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
                     </div>
 

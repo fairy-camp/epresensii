@@ -11,33 +11,37 @@ class AuthController extends Controller
     public function showLogin()
     {
         if (Auth::check()) {
-            return redirect()->route('dashboard');
+            return redirect('/'); // Redirect dinamis via routes/web.php
         }
         return view('auth.login');
     }
 
-    // Proses login
+    // Proses login (Murni Menggunakan Email)
     public function login(Request $request)
     {
+        // 1. Validasi Input Email & Password
         $credentials = $request->validate([
-            'email' => ['required', 'email'],
+            'email'    => ['required', 'email'],
             'password' => ['required'],
         ]);
 
-        // Tambahkan kondisi agar hanya akun aktif yang bisa login
-        $credentials['is_active'] = true;
-
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
+        // 2. Autentikasi Pengguna
+        if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
 
-            // Sapaan / pesan sukses
             $user = Auth::user();
-            return redirect()->intended(route('dashboard'))
-                ->with('success', "Selamat datang kembali, {$user->email}!");
+
+            // 3. Redirect Dinamis Berdasarkan Role
+            return match ($user->role) {
+                'petugas' => redirect()->route('attendance.scan'),
+                'guru'    => redirect()->route('attendance.my-history'),
+                default   => redirect()->route('dashboard'), // super_admin, admin, kepsek, wakakur
+            };
         }
 
+        // 4. Kembali ke login jika email / password salah
         return back()->withErrors([
-            'email' => 'Email atau password salah, atau akun Anda sedang dinonaktifkan.',
+            'email' => 'Email atau password yang Anda masukkan salah.',
         ])->onlyInput('email');
     }
 

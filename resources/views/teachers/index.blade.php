@@ -8,6 +8,7 @@
     <div class="card-header bg-white">
         <h5 class="card-title mb-0 fw-bold"><i class="fas fa-chalkboard-teacher me-2 text-primary"></i>Daftar Guru / Pegawai</h5>
         <div class="card-tools">
+            @if(in_array(auth()->user()->role, ['super_admin', 'admin']))
             <a href="{{ route('teachers.create') }}" class="btn btn-primary btn-sm">
                 <i class="fas fa-plus me-1"></i> Tambah Guru Baru
             </a>
@@ -15,6 +16,7 @@
             <a href="{{ route('teachers.print-all-cards') }}" target="_blank" class="btn btn-info btn-sm">
                 <i class="fas fa-print me-1"></i> Cetak Semua ID Card
             </a>
+            @endif
         </div>
         
     </div>
@@ -28,8 +30,10 @@
                         <th>Email</th>
                         <th>Jabatan</th>
                         <th>Jadwal Kerja</th>
+                        @if(in_array(auth()->user()->role, ['super_admin', 'admin']))
                         <th class="text-center">QR Code</th>
                         <th class="text-center">Aksi</th>
+                        @endif
                     </tr>
                 </thead>
                 <tbody>
@@ -42,9 +46,13 @@
                             </td>
                             <td>{{ $teacher->user->email ?? '-' }}</td>
                             <td>
-                                <span class="badge bg-info text-dark">
+                                <span class="badge bg-info text-dark mb-1">
                                     {{ $teacher->position->name ?? '-' }}
                                 </span>
+                                <br>
+                                <small class="badge bg-secondary">
+                                    Role: {{ strtoupper(str_replace('_', ' ', $teacher->user->role ?? 'guru')) }}
+                                </small>
                             </td>
                             <td>
                                 <small class="fw-semibold">{{ $teacher->workSchedule->name ?? '-' }}</small>
@@ -53,6 +61,7 @@
                                     {{ $teacher->workSchedule->check_in_time ?? '' }} - {{ $teacher->workSchedule->check_out_time ?? '' }}
                                 </small>
                             </td>
+                            @if(in_array(auth()->user()->role, ['super_admin', 'admin']))
                             <td class="text-center">
                                 @if($teacher->activeQrCode)
                                     <button type="button" class="btn btn-outline-dark btn-sm" data-bs-toggle="modal" data-bs-target="#qrModal-{{ $teacher->id }}">
@@ -78,6 +87,7 @@
                                     </form>
                                 </div>
                             </td>
+                            @endif
                         </tr>
 
                         <!-- Modal QR Code -->
