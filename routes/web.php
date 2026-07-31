@@ -37,7 +37,7 @@ Route::middleware('auth')->group(function () {
 // 3. Admin & SuperAdmin Routes (Khusus Management)
 // --------------------------------------------------------------------------
 Route::middleware(['auth', 'role:super_admin,admin'])->group(function () {
-    
+
     // =========================================================================
     // MANAJEMEN GURU
     // =========================================================================
@@ -55,6 +55,7 @@ Route::middleware(['auth', 'role:super_admin,admin'])->group(function () {
 
     // Master Jadwal Kerja
     Route::resource('work-schedules', WorkScheduleController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::get('/work-schedules/{workSchedule}/edit', [WorkScheduleController::class, 'edit'])->name('work-schedules.edit');
 
     // Penugasan Shift
     Route::get('/shift-assignments', [ShiftAssignmentController::class, 'index'])->name('shift-assignments.index');

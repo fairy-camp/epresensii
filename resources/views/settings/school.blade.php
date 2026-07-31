@@ -62,9 +62,11 @@
 
     <div class="col-md-7 mb-4">
         <div class="card shadow-sm h-100">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <div class="card-header bg-white">
                 <h5 class="card-title mb-0 fw-bold"><i class="fas fa-map-marked-alt me-2 text-primary"></i>Peta Titik & Radius Lokasi</h5>
-                <small class="text-muted">Klik/Geser marker di peta untuk ubah titik lokasi</small>
+                <div class="card-tools">
+                    <small class="text-muted">Klik/Geser marker di peta untuk ubah titik lokasi</small>
+                </div>
             </div>
             <div class="card-body p-0">
                 <div id="map" style="height: 420px; width: 100%;"></div>

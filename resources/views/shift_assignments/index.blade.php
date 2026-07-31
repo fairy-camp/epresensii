@@ -50,11 +50,13 @@
         <!-- Filter & Tabel Penugasan Hari Ini -->
         <div class="col-md-8">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header">
                     <h3 class="card-title">Penugasan Shift Tanggal: <strong>{{ $date }}</strong></h3>
-                    <form action="{{ route('shift-assignments.index') }}" method="GET" class="form-inline">
-                        <input type="date" name="date" value="{{ $date }}" class="form-control form-control-sm me-2" onchange="this.form.submit()">
-                    </form>
+                    <div class="card-tools">
+                        <form action="{{ route('shift-assignments.index') }}" method="GET" class="form-inline">
+                            <input type="date" name="date" value="{{ $date }}" class="form-control form-control-sm me-2" onchange="this.form.submit()">
+                        </form>
+                    </div>
                 </div>
                 <div class="card-body p-0">
                     <table class="table table-striped">
@@ -73,7 +75,7 @@
                                 <td>{{ $item->teacher->full_name ?? '-' }}</td>
                                 <td>
                                     <span class="badge bg-primary">
-                                        {{ $item->workSchedule->name ?? 'N/A' }} 
+                                        {{ $item->workSchedule->name ?? 'N/A' }}
                                         ({{ $item->workSchedule->check_in_time ?? '' }} - {{ $item->workSchedule->check_out_time ?? '' }})
                                     </span>
                                 </td>

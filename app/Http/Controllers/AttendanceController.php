@@ -139,16 +139,33 @@ class AttendanceController extends Controller
         // SKENARIO B: SUDAH MASUK, TAPI BELUM PULANG -> CATAT PULANG (CHECK-OUT)
         // =========================================================================
         if (is_null($attendance->check_out_time)) {
+            // Hitung jeda antara jam masuk dan jam pulang
+            $checkIn = Carbon::parse($attendance->check_in_time);
+            $checkOut = Carbon::parse($currentTime);
+            $actualDuration = $checkOut->diffInMinutes($checkIn);
+
+            // Hitung durasi yang seharusnya (berdasarkan schedule)
+            $scheduledCheckIn = Carbon::parse($schedule->check_in_time);
+            $scheduledCheckOut = Carbon::parse($schedule->check_out_time);
+            $scheduledDuration = $scheduledCheckIn->diffInMinutes($scheduledCheckOut);
+
+            // Jika jeda aktual lebih pendek dari jadwal, berarti Pulang Cepat / Telat
+            // Status late berdasarkan jeda antara jam masuk dan jam pulang
+            $newStatus = ($actualDuration < $scheduledDuration) ? 'late' : 'present';
+
             $attendance->update([
                 'check_out_time'      => $currentTime,
                 'check_out_latitude'  => $request->latitude,
                 'check_out_longitude' => $request->longitude,
+                'status'              => $newStatus,
             ]);
+
+            $statusText = ($newStatus === 'late') ? 'Pulang Cepat (Telat)' : 'Tepat Waktu';
 
             return response()->json([
                 'status'   => 'success',
                 'type'     => 'check_out',
-                'message'  => 'Presensi PULANG Berhasil!',
+                'message'  => "Presensi PULANG Berhasil! ({$statusText})",
                 'teacher'  => $teacher->full_name,
                 'time'     => $currentTime,
                 'distance' => round($distance) . ' meter'
