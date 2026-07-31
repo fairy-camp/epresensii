@@ -1,4 +1,4 @@
-@extends('layouts.app') {{-- Sesuaikan dengan layout AdminLTE Anda --}}
+@extends('layouts.main')
 
 @section('title', 'Master Jadwal Kerja')
 

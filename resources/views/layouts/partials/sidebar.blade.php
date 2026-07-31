@@ -52,7 +52,7 @@
                         </a>
                     </li>
 
-                    <li class="nav-header">REKAP & AUDIT</li>
+                    <li class="nav-header">REKAP & PENGATURAN</li>
 
                     <li class="nav-item">
                         <a href="#" class="nav-link">
@@ -69,15 +69,9 @@
                     </li>
 
                     <li class="nav-item">
-                        <a href="#" class="nav-link">
-                            <i class="nav-icon fas fa-cogs"></i>
-                            <p>Pengaturan Sekolah</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
                         <a href="{{ route('settings.school.index') }}" class="nav-link {{ request()->routeIs('settings.school.*') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-map-marker-alt"></i>
-                            <p>Lokasi Sekolah</p>
+                            <p>Pengaturan Lokasi</p>
                         </a>
                     </li>
                 @endif
