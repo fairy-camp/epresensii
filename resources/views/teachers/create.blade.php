@@ -35,9 +35,10 @@
                                 <option value="">-- Pilih Role Akses --</option>
                                 <option value="guru" {{ old('role') == 'guru' ? 'selected' : '' }}>Guru</option>
                                 <option value="kepala_sekolah" {{ old('role') == 'kepala_sekolah' ? 'selected' : '' }}>Kepala Sekolah</option>
-                                <option value="wakil_kurikulum" {{ old('role') == 'wakil_kurikulum' ? 'selected' : '' }}>Wakil Kurikulum</option>
+                                <option value="waka" {{ old('role') == 'waka' ? 'selected' : '' }}>Wakil Kepala</option>
+                                <option value="satpam" {{ old('role') == 'satpam' ? 'selected' : '' }}>Satpam</option>
+                                <option value="staff" {{ old('role') == 'staff' ? 'selected' : '' }}>Staff</option>
                                 <option value="petugas" {{ old('role') == 'petugas' ? 'selected' : '' }}>Petugas Presensi</option>
-                                <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Admin</option>
                             </select>
                             @error('role') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>

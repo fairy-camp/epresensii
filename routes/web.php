@@ -49,7 +49,7 @@ Route::middleware('auth')->group(function () {
     // B. Akses Dashboard, Laporan, & Data Guru Read-Only
     //    (Role: Super Admin, Admin, Kepala Sekolah, Wakil Kurikulum)
     // ----------------------------------------------------------------------
-    Route::middleware('role:super_admin,admin,kepala_sekolah,wakil_kurikulum')->group(function () {
+    Route::middleware('role:super_admin,admin,kepala_sekolah,waka')->group(function () {
         // Dashboard
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
@@ -88,7 +88,7 @@ Route::middleware('auth')->group(function () {
     // ----------------------------------------------------------------------
     // D. Akses Khusus Guru (Role: Guru)
     // ----------------------------------------------------------------------
-    Route::middleware('role:guru')->group(function () {
+    Route::middleware('role:guru,kepala_sekolah,waka,satpam,staff,petugas')->group(function () {
         Route::get('/my-attendance-history', [AttendanceController::class, 'myHistory'])->name('attendance.my-history');
     });
 });

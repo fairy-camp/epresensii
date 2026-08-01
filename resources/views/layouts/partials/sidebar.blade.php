@@ -22,8 +22,8 @@
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
                 
-                <!-- 1. Menu Dashboard (SuperAdmin, Admin, Kepsek, Wakakur) -->
-                @if(in_array($userRole, ['super_admin', 'admin', 'kepala_sekolah', 'wakil_kurikulum']))
+                <!-- 1. Menu Dashboard (SuperAdmin, Admin, Kepsek, Waka) -->
+                @if(in_array($userRole, ['super_admin', 'admin', 'kepala_sekolah', 'waka']))
                     <li class="nav-item">
                         <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-tachometer-alt"></i>
@@ -43,7 +43,7 @@
                 @endif
 
                 <!-- 3. Menu Riwayat Presensi Saya (Khusus Role Guru) -->
-                @if($userRole === 'guru')
+                @if(in_array($userRole, ['guru', 'kepala_sekolah', 'waka', 'satpam', 'staff', 'petugas']))
                     <li class="nav-item">
                         <a href="{{ route('attendance.my-history') }}" class="nav-link {{ request()->routeIs('attendance.my-history') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-history text-info"></i>
@@ -53,7 +53,7 @@
                 @endif
 
                 <!-- 4. MANAJEMEN MASTER -->
-                @if(in_array($userRole, ['super_admin', 'admin', 'kepala_sekolah', 'wakil_kurikulum']))
+                @if(in_array($userRole, ['super_admin', 'admin', 'kepala_sekolah', 'waka']))
                     <li class="nav-header">MANAJEMEN MASTER</li>
                     
                     <!-- Data Pegawai / Guru (Bisa diakses Admin, Kepsek, Wakakur) -->

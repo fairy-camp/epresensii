@@ -33,10 +33,10 @@ class AuthController extends Controller
 
             // 3. Redirect Dinamis Berdasarkan Role
             return match ($user->role) {
-                'petugas' => redirect()->route('attendance.scan'),
-                'guru'    => redirect()->route('attendance.my-history'),
-                default   => redirect()->route('dashboard'), // super_admin, admin, kepsek, wakakur
-            };
+            'petugas',                  => redirect()->route('attendance.scan'),
+            'guru', 'satpam', 'staff'   => redirect()->route('attendance.my-history'),
+            default                     => redirect()->route('dashboard'), // super_admin, admin, kepala_sekolah, waka, staff
+        };
         }
 
         // 4. Kembali ke login jika email / password salah

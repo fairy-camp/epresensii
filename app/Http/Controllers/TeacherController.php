@@ -41,7 +41,7 @@ class TeacherController extends Controller
             'full_name'        => 'required|string|max:255',
             'email'            => 'required|email|unique:users,email',
             'password'         => 'required|string|min:6',
-            'role'             => 'required|in:guru,kepala_sekolah,wakil_kurikulum,petugas,admin',
+            'role'             => 'required|in:guru,kepala_sekolah,waka,satpam,staff,petugas',
             'nik'              => 'nullable|string|max:16|unique:teachers,nik',
             'nip'              => 'nullable|string|max:30|unique:teachers,nip',
             'gender'           => 'required|in:L,P',
