@@ -75,7 +75,8 @@ class DashboardController extends Controller
             'totalAbsent',
             'totalScanHariIni',
             'recentAttendances',
-            'lateAttendances'
+            'lateAttendances',
+            'totalLateCount'
         ));
     }
 }

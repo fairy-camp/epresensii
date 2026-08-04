@@ -38,23 +38,25 @@ Route::middleware('auth')->group(function () {
     });
 
     // ----------------------------------------------------------------------
-    // A. Akses Scanner Presensi QR Code (Role: Super Admin, Admin, Petugas)
+    // A. Akses Scanner Presensi Khusus Petugas (Tampilan Standalone Mobile)
     // ----------------------------------------------------------------------
-    Route::middleware('role:super_admin,admin,petugas')->group(function () {
+    Route::middleware('role:petugas')->group(function () {
         Route::get('/attendance/scan', [AttendanceController::class, 'scanPage'])->name('attendance.scan');
         Route::post('/attendance/process', [AttendanceController::class, 'processScan'])->name('attendance.process');
     });
 
     // ----------------------------------------------------------------------
-    // B. Akses Dashboard, Laporan, & Data Guru Read-Only
-    //    (Role: Super Admin, Admin, Kepala Sekolah, Wakil Kurikulum)
+    // B. Akses Lihat Data & Laporan (Role: Super Admin, Admin, Kepala Sekolah, Waka)
     // ----------------------------------------------------------------------
     Route::middleware('role:super_admin,admin,kepala_sekolah,waka')->group(function () {
         // Dashboard
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-        // Data Guru (Hanya Melihat Daftar / Read-Only)
+        // Data Guru (Hanya Melihat Daftar)
         Route::get('/teachers', [TeacherController::class, 'index'])->name('teachers.index');
+
+        // Data Presensi (Hanya Melihat Daftar)
+        Route::get('/attendances', [AttendanceController::class, 'index'])->name('attendances.index');
 
         // Laporan Presensi
         Route::get('/reports/attendance', [ReportController::class, 'index'])->name('reports.attendance');
@@ -62,15 +64,22 @@ Route::middleware('auth')->group(function () {
     });
 
     // ----------------------------------------------------------------------
-    // C. Akses Manajemen Full, Master Data, & Cetak (Role: Super Admin, Admin)
+    // C. Akses Manajemen & Master Data (HANYA Super Admin & Admin)
     // ----------------------------------------------------------------------
     Route::middleware('role:super_admin,admin')->group(function () {
-        // Tambah Guru & Aksi Cetak ID Card / Regenerate QR
-        Route::get('/teachers/create', [TeacherController::class, 'create'])->name('teachers.create');
+        // Master Teachers CRUD
         Route::post('/teachers', [TeacherController::class, 'store'])->name('teachers.store');
+        Route::put('/teachers/{id}', [TeacherController::class, 'update'])->name('teachers.update');
+        Route::delete('/teachers/{id}', [TeacherController::class, 'destroy'])->name('teachers.destroy');
+
+        // Cetak & QR Guru
         Route::get('/teachers/print-all-cards', [TeacherController::class, 'printAllCards'])->name('teachers.print-all-cards');
         Route::get('/teachers/{id}/print-card', [TeacherController::class, 'printCard'])->name('teachers.print-card');
         Route::post('/teachers/{id}/regenerate-qr', [TeacherController::class, 'regenerateQr'])->name('teachers.regenerate-qr');
+
+        // Edit & Hapus Data Presensi
+        Route::put('/attendances/{id}', [AttendanceController::class, 'update'])->name('attendances.update');
+        Route::delete('/attendances/{id}', [AttendanceController::class, 'destroy'])->name('attendances.destroy');
 
         // Master Jadwal Kerja
         Route::resource('work-schedules', WorkScheduleController::class)->only(['index', 'store', 'update', 'destroy']);
@@ -86,9 +95,9 @@ Route::middleware('auth')->group(function () {
     });
 
     // ----------------------------------------------------------------------
-    // D. Akses Khusus Guru (Role: Guru)
+    // D. Akses Histori Presensi Mandiri (Guru & Staf)
     // ----------------------------------------------------------------------
-    Route::middleware('role:guru,kepala_sekolah,waka,satpam,staff,petugas')->group(function () {
+    Route::middleware('role:guru,kepala_sekolah,waka,satpam,staff')->group(function () {
         Route::get('/my-attendance-history', [AttendanceController::class, 'myHistory'])->name('attendance.my-history');
     });
 });

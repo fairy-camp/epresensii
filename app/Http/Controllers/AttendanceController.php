@@ -84,16 +84,15 @@ class AttendanceController extends Controller
         $now = Carbon::now();
         $currentTime = $now->format('H:i:s');
 
-        // 3. Cari Shift Assignment Guru KHUSUS HARI INI
+        // 3. Cari Shift Assignment Permanen Guru
         $shiftAssignment = ShiftAssignment::with('workSchedule')
             ->where('teacher_id', $teacher->id)
-            ->where('date', $today)
             ->first();
 
         if (!$shiftAssignment || !$shiftAssignment->workSchedule) {
             return response()->json([
                 'status'  => 'error',
-                'message' => "Guru {$teacher->full_name} belum memiliki jadwal shift untuk hari ini!"
+                'message' => "Guru {$teacher->full_name} belum memiliki jadwal shift!"
             ], 400);
         }
 
@@ -227,5 +226,59 @@ class AttendanceController extends Controller
             'totalLate',
             'totalRecords'
         ));
+    }
+
+    // 1. Menampilkan Semua Data Presensi + Filter Tanggal
+    public function index(Request $request)
+    {
+        $date = $request->input('date', \Carbon\Carbon::now()->format('Y-m-d'));
+
+        // Ambil seluruh data presensi berdasarkan tanggal agar DataTables berfungsi penuh
+        $attendances = AttendanceRecord::with('teacher')
+            ->whereDate('date', $date)
+            ->latest('check_in_time')
+            ->get();
+
+        return view('attendance.index', compact('attendances', 'date'));
+    }
+
+    // 2. Memperbarui Data Presensi (Via Modal Edit)
+    public function update(Request $request, $id)
+    {
+        // Proteksi Keamanan Tambahan (Server-side check)
+        if (!in_array(auth()->user()->role, ['super_admin', 'admin'])) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengedit data presensi.');
+        }
+
+        $attendance = AttendanceRecord::findOrFail($id);
+
+        $request->validate([
+            'status'         => 'required|in:present,late,permission,sick,absent',
+            'check_in_time'  => 'nullable|date_format:H:i',
+            'check_out_time' => 'nullable|date_format:H:i',
+            'notes'          => 'nullable|string|max:255',
+        ]);
+
+        $attendance->update([
+            'status'         => $request->status,
+            'check_in_time'  => $request->check_in_time,
+            'check_out_time' => $request->check_out_time,
+            'notes'          => $request->notes,
+        ]);
+
+        return redirect()->back()->with('success', 'Data presensi berhasil diperbarui!');
+    }
+
+    public function destroy($id)
+    {
+        // Proteksi Keamanan Tambahan (Server-side check)
+        if (!in_array(auth()->user()->role, ['super_admin', 'admin'])) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menghapus data presensi.');
+        }
+
+        $attendance = AttendanceRecord::findOrFail($id);
+        $attendance->delete();
+
+        return redirect()->back()->with('success', 'Data presensi berhasil dihapus!');
     }
 }

@@ -15,13 +15,8 @@ class ShiftAssignment extends Model
     protected $fillable = [
         'teacher_id',
         'work_schedule_id',
-        'date',
     ];
-
-    protected $casts = [
-        'date' => 'date',
-    ];
-
+   
     public function teacher(): BelongsTo
     {
         return $this->belongsTo(Teacher::class, 'teacher_id');

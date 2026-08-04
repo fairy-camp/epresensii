@@ -11,9 +11,11 @@
 
 <aside class="main-sidebar sidebar-dark-primary elevation-4">
     <!-- Brand Logo -->
-    <a href="{{ $brandRoute }}" class="brand-link text-decoration-none">
-        <i class="fas fa-qrcode brand-image ms-3 mt-1 fa-lg text-primary"></i>
+    <!-- Brand Logo -->
+    <a href="{{ $brandRoute }}" class="brand-link text-decoration-none" style="display: flex; align-items: center; padding-left: 1.25rem;">
+        <img src="{{ asset('img/logo.png') }}" alt="Logo Sekolah" style="height: 40px; width: auto; max-width: 40px; object-fit: contain; flex-shrink: 0; margin-left: 2px;">
         <span class="brand-text font-weight-bold ms-2">E-Presensi</span>
+        <!-- <small class="text-secondary" style="font-size: 11px; margin-top: 2px;">SMK Syafi'i Akrom</small> -->
     </a>
 
     <!-- Sidebar -->
@@ -32,15 +34,14 @@
                     </li>
                 @endif
 
-                <!-- 2. Menu Scan Presensi (SuperAdmin, Admin, Petugas) -->
-                @if(in_array($userRole, ['super_admin', 'admin', 'petugas']))
-                    <li class="nav-item">
-                        <a href="{{ route('attendance.scan') }}" class="nav-link {{ request()->routeIs('attendance.scan') ? 'active' : '' }}">
-                            <i class="nav-icon fas fa-qrcode"></i>
-                            <p>Scan Presensi QR</p>
-                        </a>
-                    </li>
-                @endif
+                <!-- @if(in_array(auth()->user()->role, ['super_admin', 'admin']))
+                <li class="nav-item">
+                    <a href="{{ route('attendance.scan') }}" class="nav-link">
+                        <i class="nav-icon fas fa-qrcode"></i>
+                        <p>Scanner Presensi</p>
+                    </a>
+                </li>
+                @endif -->
 
                 <!-- 3. Menu Riwayat Presensi Saya (Khusus Role Guru) -->
                 @if(in_array($userRole, ['guru', 'kepala_sekolah', 'waka', 'satpam', 'staff', 'petugas']))
@@ -61,6 +62,13 @@
                         <a href="{{ route('teachers.index') }}" class="nav-link {{ request()->routeIs('teachers.*') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-users"></i>
                             <p>Data Pegawai / Guru</p>
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a href="{{ route('attendances.index') }}" class="nav-link {{ request()->routeIs('attendances.index') ? 'active' : '' }}">
+                            <i class="nav-icon fas fa-clipboard-list"></i>
+                            <p>Data Presensi</p>
                         </a>
                     </li>
 

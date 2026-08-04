@@ -5,7 +5,7 @@
             <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
         </li>
         <li class="nav-item d-none d-sm-inline-block">
-            <span class="nav-link fw-semibold text-dark">E-Presensi — UP RPL CodePelita</span>
+            <span class="nav-link fw-semibold text-dark">SMK Syafi'i Akrom</span>
         </li>
     </ul>
 

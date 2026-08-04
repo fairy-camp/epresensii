@@ -9,7 +9,7 @@
     <div class="col-md-3">
         <div class="card bg-primary text-white mb-3">
             <div class="card-body">
-                <h6>Total Pegawai</h6>
+                <h6>Total Guru dan Pegawai</h6>
                 <h3>{{ $totalTeachers }}</h3>
             </div>
         </div>
@@ -34,7 +34,7 @@
         <div class="card bg-danger text-white mb-3">
             <div class="card-body">
                 <h6>Tidak Hadir / Alpa</h6>
-                <h3>{{ $totalAbsent }}</h3>
+                <h3>{{ $totalLateCount }}</h3>
             </div>
         </div>
     </div>
@@ -123,12 +123,4 @@
     </div>
 </div>
 
-<div class="card shadow-sm mt-3">
-    <div class="card-header bg-white">
-        <h5 class="card-title mb-0 fw-bold">Selamat Datang!</h5>
-    </div>
-    <div class="card-body">
-        <p>Anda berhasil masuk ke sistem <strong>E-Presensi UP RPL CodePelita</strong> sebagai <code>{{ auth()->user()->email }}</code>.</p>
-    </div>
-</div>
 @endsection

@@ -1,112 +1,336 @@
-@extends('layouts.main')
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>E-Presensi Mobile — Standalone Scanner</title>
 
-@section('title', 'Scan QR Code Presensi')
-@section('page-title', 'Scanner Presensi Real-Time')
-
-@section('content')
+    <!-- Google Font: Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- HTML5 QR Code Scanner Library -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
-    <div class="row justify-content-center">
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-primary text-white text-center py-3">
-                    <h5 class="card-title mb-0 fw-bold"><i class="fas fa-qrcode me-2"></i>Scanner Presensi Real-Time</h5>
-                </div>
-                <div class="card-body text-center p-4">
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
 
-                    <!-- Alert Info GPS -->
-                    <div id="gps-status" class="alert alert-info py-2 mb-3">
-                        <i class="fas fa-spinner fa-spin me-1"></i> Mendapatkan lokasi GPS Anda...
-                    </div>
+        html, body {
+            height: 100%;
+            height: 100dvh;
+            max-height: 100dvh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #f8fafc;
+            color: #0f172a;
+            display: flex;
+            flex-direction: column;
+        }
 
-                    <!-- Form Koordinat Manual (Fallback saat GPS browser ditolak) -->
-                    <div id="gps-manual" class="d-none mb-3">
-                        <form id="formManualGps" class="p-2 bg-light rounded border text-start">
-                            <small class="text-muted d-block mb-2">Gunakan koordinat manual (Google Maps: klik kanan lokasi
-                                & salin koordinat):</small>
-                            <div class="row g-2">
-                                <div class="col-6">
-                                    <label for="manual_lat" class="form-label small fw-bold mb-1">Latitude</label>
-                                    <input type="text" id="manual_lat" class="form-control form-control-sm"
-                                        placeholder="-6.208763" autocomplete="off">
-                                </div>
-                                <div class="col-6">
-                                    <label for="manual_lng" class="form-label small fw-bold mb-1">Longitude</label>
-                                    <input type="text" id="manual_lng" class="form-control form-control-sm"
-                                        placeholder="106.845599" autocomplete="off">
-                                </div>
-                            </div>
-                            <button type="submit" class="btn btn-sm btn-outline-primary w-100 mt-2">
-                                <i class="fas fa-map-marker-alt me-1"></i> Gunakan Koordinat Manual
-                            </button>
-                        </form>
-                    </div>
+        /* App Bar Header (Light Mode) */
+        .mobile-header {
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 8px 14px;
+            flex-shrink: 0;
+            z-index: 1000;
+        }
 
-                    <!-- Tab Opsi: Kamera vs Input Manual -->
-                    <ul class="nav nav-pills nav-justified mb-3" id="pills-tab" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="pills-camera-tab" data-bs-toggle="pill"
-                                data-bs-target="#pills-camera" type="button" role="tab">
-                                <i class="fas fa-camera me-1"></i> Kamera QR
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="pills-manual-tab" data-bs-toggle="pill"
-                                data-bs-target="#pills-manual" type="button" role="tab">
-                                <i class="fas fa-keyboard me-1"></i> Input Manual (Testing)
-                            </button>
-                        </li>
-                    </ul>
+        .header-logo-box {
+            width: 40px;
+            height: 40px;
+            min-width: 36px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
 
-                    <div class="tab-content" id="pills-tabContent">
-                        <!-- Tab 1: Box Frame Kamera -->
-                        <div class="tab-pane fade show active" id="pills-camera" role="tabpanel">
-                            <div class="d-flex justify-content-center mb-2">
-                                <button type="button" id="btnSwitchCamera" class="btn btn-sm btn-outline-secondary">
-                                    <i class="fas fa-sync-alt me-1"></i> <span id="cameraLabel">Kamera Belakang</span>
-                                </button>
-                            </div>
-                            <div id="reader" style="width: 100%; max-width: 450px; margin: 0 auto;"
-                                class="border rounded overflow-hidden shadow-sm"></div>
+        /* Main App Body Container */
+        .app-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 10px 12px;
+            overflow: hidden;
+        }
+
+        /* Digital Clock Banner */
+        .clock-card {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            border-radius: 12px;
+            padding: 8px 12px;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.2);
+            flex-shrink: 0;
+        }
+
+        /* Camera Viewfinder Box */
+        .scanner-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 2px solid #cbd5e1;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            background-color: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #reader {
+            width: 100% !important;
+            height: 100% !important;
+            border: none !important;
+            background-color: #e2e8f0 !important;
+        }
+
+        #reader video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+            border-radius: 12px;
+        }
+
+        /* Bottom Floating Nav */
+        .bottom-card {
+            background: #ffffff;
+            border-top: 1px solid #e2e8f0;
+            padding: 8px 12px;
+            flex-shrink: 0;
+            text-align: center;
+        }
+
+        /* Button Customization */
+        .btn-camera-toggle {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(4px);
+            color: #0f172a;
+            border: 1px solid #cbd5e1;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 11px;
+            font-weight: 500;
+            z-index: 10;
+        }
+
+        .btn-camera-toggle:hover, .btn-camera-toggle:focus {
+            background: #ffffff;
+            color: #2563eb;
+        }
+
+        .nav-pills {
+            background-color: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            padding: 3px;
+        }
+
+        .nav-pills .nav-link {
+            border-radius: 8px;
+            color: #64748b;
+            font-weight: 500;
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+
+        .nav-pills .nav-link.active {
+            background-color: #2563eb;
+            color: #ffffff;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+        }
+
+        /* POPUP NOTIFICATION OVERLAY */
+        .scan-popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.35);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            padding: 20px;
+        }
+
+        .scan-popup-card {
+            width: 100%;
+            max-width: 320px;
+            border-radius: 20px;
+            padding: 20px 16px;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            animation: popupScale 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popupScale {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Mobile App (Light Mode) -->
+    <header class="mobile-header d-flex align-items-center justify-content-between shadow-sm">
+        <div class="d-flex align-items-center gap-2">
+            <div class="header-logo-box d-flex align-items-center justify-content-center">
+                <img src="{{ asset('img/logo.png') }}" alt="Logo Sekolah" style="width: 100%; height: 100%; object-fit: contain;">
+            </div>
+            <div class="d-flex flex-column justify-content-center">
+                <h6 class="mb-0 fw-bold text-dark fs-6 lh-1">E-Presensi</h6>
+                <small class="text-secondary" style="font-size: 11px; margin-top: 2px;">SMK Syafi'i Akrom</small>
+            </div>
+        </div>
+        <form action="{{ route('logout') }}" method="POST" class="m-0">
+            @csrf
+            <button type="submit" class="btn btn-sm btn-outline-danger border-0 rounded-circle p-0 d-flex align-items-center justify-content-center" title="Logout" style="width: 32px; height: 32px;">
+                <i class="fas fa-power-off fs-6"></i>
+            </button>
+        </form>
+    </header>
+
+    <!-- Content Area (Fit 1 Screen Height) -->
+    <main class="app-body">
+        <!-- Jam Digital & Tanggal Banner -->
+        <div class="clock-card text-center">
+            <div class="d-flex align-items-center justify-content-center gap-2">
+                <span id="realtime-clock" class="fs-5 fw-bold text-white tracking-wide">00:00:00</span>
+                <span class="text-white-50 small">|</span>
+                <span id="realtime-date" class="small text-white-50 fw-medium">Senin, 1 Jan 2026</span>
+            </div>
+        </div>
+
+        <!-- Status GPS Badge -->
+        <div id="gps-status" class="alert alert-light border text-secondary text-center py-1 px-2 mb-0 rounded-3 small flex-shrink-0 shadow-sm" style="font-size: 11px;">
+            <i class="fas fa-spinner fa-spin me-1 text-primary"></i> Mendapatkan koordinat GPS...
+        </div>
+
+        <!-- Fallback GPS Manual -->
+        <div id="gps-manual" class="d-none flex-shrink-0">
+            <div class="card bg-white border p-2 rounded-3 shadow-sm">
+                <small class="text-warning d-block mb-1" style="font-size: 11px;"><i class="fas fa-exclamation-triangle me-1"></i> Mode GPS Manual:</small>
+                <form id="formManualGps">
+                    <div class="row g-1 mb-1">
+                        <div class="col-6">
+                            <input type="text" id="manual_lat" class="form-control form-control-sm bg-light text-dark border py-1" placeholder="Latitude (-6.xxx)" style="font-size: 11px;">
                         </div>
-
-                        <!-- Tab 2: Form Input Manual Testing -->
-                        <div class="tab-pane fade" id="pills-manual" role="tabpanel">
-                            <form id="formManualPresensi" class="p-3 bg-light rounded border text-start">
-                                <div class="mb-3">
-                                    <label for="manual_code" class="form-label fw-bold">Kode QR / NIP Guru</label>
-                                    <input type="text" id="manual_code" class="form-control"
-                                        placeholder="Masukkan Kode QR atau NIP Guru" required autocomplete="off">
-                                    <small class="text-muted">Ketik NIP Guru atau Kode QR untuk simulasi absensi tanpa
-                                        kamera.</small>
-                                </div>
-                                <button type="submit" class="btn btn-primary w-100 fw-bold">
-                                    <i class="fas fa-paper-plane me-1"></i> Kirim Presensi
-                                </button>
-                            </form>
+                        <div class="col-6">
+                            <input type="text" id="manual_lng" class="form-control form-control-sm bg-light text-dark border py-1" placeholder="Longitude (106.xxx)" style="font-size: 11px;">
                         </div>
                     </div>
+                    <button type="submit" class="btn btn-xs btn-primary w-100 py-1 fw-medium" style="font-size: 11px;">Simpan Koordinat</button>
+                </form>
+            </div>
+        </div>
 
-                    <!-- Respon Alert Real-time -->
-                    <div id="scan-result" class="mt-3" style="display: none;"></div>
+        <!-- Tab Navigasi: Scanner vs Manual -->
+        <ul class="nav nav-pills nav-justified p-1 rounded-3 mb-0 flex-shrink-0" id="pills-tab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="pills-camera-tab" data-bs-toggle="pill" data-bs-target="#pills-camera" type="button" role="tab">
+                    <i class="fas fa-camera me-1"></i> Scan Kamera
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="pills-manual-tab" data-bs-toggle="pill" data-bs-target="#pills-manual" type="button" role="tab">
+                    <i class="fas fa-keyboard me-1"></i> Input NIP
+                </button>
+            </li>
+        </ul>
 
+        <!-- Tab Content Flex Area -->
+        <div class="tab-content flex-grow-1 position-relative" id="pills-tabContent" style="min-height: 0;">
+            <!-- TAB 1: Kamera Scanner -->
+            <div class="tab-pane fade show active h-100 position-relative" id="pills-camera" role="tabpanel">
+                <div class="scanner-container">
+                    <!-- Switch Camera Button -->
+                    <button type="button" id="btnSwitchCamera" class="btn btn-camera-toggle shadow-sm position-absolute top-0 end-0 m-2">
+                        <i class="fas fa-sync-alt me-1 text-primary"></i> <span id="cameraLabel">Kamera Belakang</span>
+                    </button>
+
+                    <!-- HTML5 QR Reader Container -->
+                    <div id="reader"></div>
                 </div>
-                <div class="card-footer bg-white text-center text-muted small py-2">
-                    Batas Radius Sekolah: <strong>{{ $school->geofence_radius ?? 50 }} Meter</strong>
+            </div>
+
+            <!-- TAB 2: Input Manual NIP -->
+            <div class="tab-pane fade h-100" id="pills-manual" role="tabpanel">
+                <div class="card bg-white border p-3 rounded-4 h-100 d-flex flex-column justify-content-center shadow-sm">
+                    <form id="formManualPresensi">
+                        <div class="mb-3">
+                            <label for="manual_code" class="form-label text-secondary small fw-medium">NIP Guru / Kode QR Card</label>
+                            <input type="text" id="manual_code" class="form-control form-control-lg bg-light text-dark border text-center" placeholder="Ketik NIP / Kode QR" required autocomplete="off">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm">
+                            <i class="fas fa-paper-plane me-1"></i> Kirim Presensi
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
+    </main>
+
+    <!-- POPUP NOTIFICATION MODAL OVERLAY -->
+    <div id="scan-popup-overlay" class="scan-popup-overlay">
+        <div id="scan-popup-card" class="scan-popup-card">
+            <!-- Isi Konten Notifikasi dimasukkan via JavaScript -->
+        </div>
     </div>
 
+    <!-- Footer Mobile -->
+    <footer class="bottom-card">
+        <small class="text-secondary d-block" style="font-size: 11px;">
+            <i class="fas fa-map-marker-alt text-danger me-1"></i> Radius Sekolah: <strong>{{ $school->geofence_radius ?? 50 }} Meter</strong> | E-Presensi &copy; {{ date('Y') }}
+        </small>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // 1. Fungsi Text-to-Speech (Suara Bahasa Indonesia)
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Hentikan ucapan aktif
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'id-ID'; // Bahasa Indonesia
+                utterance.rate = 0.95;    // Kecepatan normal
+                utterance.pitch = 1.0;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // 2. Digital Realtime Clock
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            
+            document.getElementById('realtime-clock').textContent = `${hours}:${minutes}:${seconds}`;
+
+            const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+            document.getElementById('realtime-date').textContent = now.toLocaleDateString('id-ID', options);
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // 3. Logic Scanner & Geolocation
         document.addEventListener("DOMContentLoaded", function() {
             let currentLat = null;
             let currentLng = null;
             let isProcessing = false;
 
             const gpsStatus = document.getElementById('gps-status');
-            const scanResult = document.getElementById('scan-result');
+            const popupOverlay = document.getElementById('scan-popup-overlay');
+            const popupCard = document.getElementById('scan-popup-card');
+
             const formManual = document.getElementById('formManualPresensi');
             const manualCodeInput = document.getElementById('manual_code');
             const gpsManualBox = document.getElementById('gps-manual');
@@ -116,166 +340,172 @@
             const btnSwitchCamera = document.getElementById('btnSwitchCamera');
             const cameraLabel = document.getElementById('cameraLabel');
 
-            // Preferensi kamera (depan/belakang), diingat lewat localStorage
             const CAMERA_STORAGE_KEY = 'presensi_camera_facing';
             let currentFacingMode = localStorage.getItem(CAMERA_STORAGE_KEY) || 'environment';
             let isSwitchingCamera = false;
 
-            // Helper: update status GPS
             function setGpsStatus(className, html) {
                 gpsStatus.className = className;
                 gpsStatus.innerHTML = html;
             }
 
-            // Helper: tampilkan fallback koordinat manual
             function showGpsError(message) {
-                setGpsStatus(
-                    "alert alert-danger py-2 mb-3",
-                    `<i class="fas fa-exclamation-triangle me-1"></i> ${message}`
-                );
+                setGpsStatus("alert alert-danger py-1 px-2 mb-0 rounded-3 small flex-shrink-0 shadow-sm", `<i class="fas fa-exclamation-triangle me-1"></i> ${message}`);
                 gpsManualBox.classList.remove('d-none');
             }
 
-            // 1. Ambil Lokasi GPS Perangkat
+            function showPopup(cardClass, iconHtml, messageHtml) {
+                popupCard.className = `scan-popup-card ${cardClass}`;
+                popupCard.innerHTML = `
+                    <div class="mb-2">${iconHtml}</div>
+                    <div class="fw-bold fs-6 mb-1">${messageHtml}</div>
+                `;
+                popupOverlay.style.display = "flex";
+            }
+
+            function hidePopup() {
+                popupOverlay.style.display = "none";
+            }
+
+            // A. Geolocation GPS Tracking
             if (navigator.geolocation) {
                 navigator.geolocation.watchPosition(
                     function(position) {
                         currentLat = position.coords.latitude;
                         currentLng = position.coords.longitude;
-                        setGpsStatus(
-                            "alert alert-success py-2 mb-3",
-                            `<i class="fas fa-check-circle me-1"></i> GPS Terhubung (${currentLat.toFixed(5)}, ${currentLng.toFixed(5)})`
-                        );
+                        setGpsStatus("alert alert-success py-1 px-2 mb-0 rounded-3 small flex-shrink-0 shadow-sm", `<i class="fas fa-check-circle me-1"></i> GPS Aktif (${currentLat.toFixed(5)}, ${currentLng.toFixed(5)})`);
                         gpsManualBox.classList.add('d-none');
                     },
                     function(error) {
                         if (error.code === error.PERMISSION_DENIED) {
-                            showGpsError(
-                                'Akses GPS Ditolak. Aktifkan izin Lokasi di browser Anda.<br><small class="text-muted">Catatan: Geolokasi browser hanya berjalan di HTTPS (atau localhost). `php artisan serve` memakai HTTP sehingga izin GPS selalu ditolak di HP.</small>'
-                                );
-                        } else if (error.code === error.POSITION_UNAVAILABLE) {
-                            showGpsError(
-                                'Posisi GPS tidak tersedia (di dalam ruangan / sinyal lemah). Coba dekat jendela, atau isi koordinat manual di bawah.'
-                                );
-                        } else if (error.code === error.TIMEOUT) {
-                            showGpsError(
-                                'Waktu permintaan GPS habis. Coba lagi, atau isi koordinat manual di bawah.'
-                                );
+                            showGpsError('Akses GPS ditolak browser. Izinkan lokasi di pengaturan HP.');
                         } else {
-                            showGpsError('Terjadi kesalahan GPS: ' + error.message);
+                            showGpsError('Sinyal GPS lemah atau tidak tersedia.');
                         }
-                    }, {
-                        enableHighAccuracy: true,
-                        timeout: 10000,
-                        maximumAge: 30000
-                    }
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
                 );
             } else {
-                setGpsStatus("alert alert-danger py-2 mb-3", "Browser Anda tidak mendukung Geolocation GPS.");
+                setGpsStatus("alert alert-danger py-1 px-2 mb-0 rounded-3 small flex-shrink-0 shadow-sm", "Browser tidak mendukung Geolocation.");
             }
 
-            // 1b. Fallback: form koordinat manual
+            // B. Manual GPS Submit
             if (formManualGps) {
                 formManualGps.addEventListener('submit', function(e) {
                     e.preventDefault();
                     const lat = parseFloat(manualLatInput.value);
                     const lng = parseFloat(manualLngInput.value);
-
-                    if (isNaN(lat) || isNaN(lng)) {
-                        alert(
-                        "Masukkan Latitude dan Longitude yang valid (contoh: -6.208763, 106.845599).");
-                        return;
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        currentLat = lat;
+                        currentLng = lng;
+                        setGpsStatus("alert alert-warning py-1 px-2 mb-0 rounded-3 small flex-shrink-0 shadow-sm", `<i class="fas fa-map-marker-alt me-1"></i> GPS Manual (${lat.toFixed(5)}, ${lng.toFixed(5)})`);
                     }
-
-                    currentLat = lat;
-                    currentLng = lng;
-                    setGpsStatus(
-                        "alert alert-warning py-2 mb-3",
-                        `<i class="fas fa-map-marker-alt me-1"></i> Lokasi manual digunakan (${lat.toFixed(5)}, ${lng.toFixed(5)})`
-                    );
                 });
             }
 
-            // 2. Fungsi Eksekusi Presensi (Dipakai oleh Kamera & Form Manual)
+            // C. Eksekusi Kirim Presensi via AJAX dengan Suara
             const qrCodeSuccessCallback = (decodedText) => {
                 if (isProcessing) return;
 
                 if (!currentLat || !currentLng) {
-                    alert("Lokasi GPS belum didapatkan! Pastikan izin lokasi diaktifkan pada browser Anda.");
+                    showPopup('bg-danger text-white', '<i class="fas fa-location-slash fa-3x"></i>', 'Lokasi GPS Belum Didapatkan!');
+                    setTimeout(() => { hidePopup(); }, 1200);
                     return;
                 }
 
                 isProcessing = true;
-                scanResult.style.display = "block";
-                scanResult.className = "alert alert-info";
-                scanResult.innerHTML = `<i class="fas fa-spinner fa-spin me-1"></i> Memproses presensi...`;
+                
+                // Show Processing Popup
+                showPopup('bg-white border text-dark shadow-sm', '<i class="fas fa-spinner fa-spin fa-3x text-primary"></i>', 'Memproses Presensi...');
 
-                // Audio Beep
                 let beep = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
                 beep.play().catch(() => {});
 
-                // Send Request via AJAX
                 fetch("{{ route('attendance.process') }}", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-CSRF-TOKEN": "{{ csrf_token() }}"
-                        },
-                        body: JSON.stringify({
-                            qr_code: decodedText,
-                            latitude: currentLat,
-                            longitude: currentLng
-                        })
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRF-TOKEN": "{{ csrf_token() }}"
+                    },
+                    body: JSON.stringify({
+                        qr_code: decodedText,
+                        latitude: currentLat,
+                        longitude: currentLng
                     })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === 'success') {
-                            scanResult.className = "alert alert-success fw-bold";
-                            scanResult.innerHTML =
-                                `<i class="fas fa-check-circle me-1"></i> ${data.message}<br><small>${data.teacher} - Jam: ${data.time} (Jarak: ${data.distance})</small>`;
-                            if (manualCodeInput) manualCodeInput.value = '';
-                        } else if (data.status === 'warning') {
-                            scanResult.className = "alert alert-warning fw-bold";
-                            scanResult.innerHTML =
-                                `<i class="fas fa-exclamation-circle me-1"></i> ${data.message}`;
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success' || data.status === 'warning') {
+                        const teacherName = data.teacher || 'Pengguna';
+                        let voiceText = '';
+
+                        // Cek kondisi keterlambatan, pulang, atau masuk
+                        const isLate = data.is_late || (data.message && data.message.toLowerCase().includes('terlambat'));
+                        const isPulang = data.type === 'pulang' || (data.message && data.message.toLowerCase().includes('pulang'));
+
+                        if (isLate) {
+                            voiceText = `${teacherName}, anda terlambat`;
+                        } else if (isPulang) {
+                            voiceText = `Sampai jumpa lagi ${teacherName}`;
                         } else {
-                            scanResult.className = "alert alert-danger fw-bold";
-                            scanResult.innerHTML =
-                                `<i class="fas fa-times-circle me-1"></i> ${data.message}`;
+                            voiceText = `Selamat Datang ${teacherName}`;
                         }
 
-                        setTimeout(() => {
-                            isProcessing = false;
-                        }, 3000);
-                    })
-                    .catch(error => {
-                        scanResult.className = "alert alert-danger fw-bold";
-                        scanResult.innerHTML =
-                            `<i class="fas fa-times-circle me-1"></i> Terjadi kesalahan jaringan. Coba lagi.`;
-                        setTimeout(() => {
-                            isProcessing = false;
-                        }, 3000);
-                    });
+                        // Putar Suara Ucapan
+                        speakText(voiceText);
+
+                        // Tampilkan Popup Notifikasi Visual
+                        if (data.status === 'success') {
+                            showPopup('bg-success text-white', '<i class="fas fa-check-circle fa-3x"></i>', `${data.message}<br><small class="fw-normal fs-6">${data.teacher ?? ''} (${data.time ?? ''})</small>`);
+                        } else {
+                            showPopup('bg-warning text-dark', '<i class="fas fa-exclamation-circle fa-3x"></i>', data.message);
+                        }
+
+                        if (manualCodeInput) manualCodeInput.value = '';
+                    } else {
+                        showPopup('bg-danger text-white', '<i class="fas fa-times-circle fa-3x"></i>', data.message);
+                    }
+
+                    // Tahan Popup 2 Detik agar ucapan selesai
+                    setTimeout(() => { 
+                        hidePopup();
+                        isProcessing = false; 
+                    }, 2000);
+                })
+                // .catch(() => {
+                //     showPopup('bg-danger text-white', '<i class="fas fa-wifi fa-3x"></i>', 'Koneksi Terganggu!');
+                //     setTimeout(() => { 
+                //         hidePopup();
+                //         isProcessing = false; 
+                //     }, 1200);
+                // });
+
+                // Contoh jika menggunakan fetch:
+                .catch(error => {
+                    console.error('Error detail:', error);
+                    alert('Error Detail: ' + error.message); // Tampilkan alert agar terlihat di HP
+                });
+
+
             };
 
-            // 3. Listener Form Input Manual Testing
+            // D. Listener Form Input Manual
             if (formManual) {
                 formManual.addEventListener('submit', function(e) {
                     e.preventDefault();
                     const code = manualCodeInput.value.trim();
-                    if (code) {
-                        qrCodeSuccessCallback(code);
-                    }
+                    if (code) qrCodeSuccessCallback(code);
                 });
             }
 
-            // 4. Inisialisasi Kamera HTML5 QR Scanner
+            // E. Inisialisasi Scanner Kamera
             const html5QrCode = new Html5Qrcode("reader");
-            const config = {
-                fps: 10,
-                qrbox: {
-                    width: 250,
-                    height: 250
+            const config = { 
+                fps: 15, 
+                qrbox: function(viewfinderWidth, viewfinderHeight) {
+                    const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                    const size = Math.floor(minEdge * 0.75);
+                    return { width: size, height: size };
                 }
             };
 
@@ -283,31 +513,20 @@
                 cameraLabel.textContent = currentFacingMode === 'environment' ? 'Kamera Belakang' : 'Kamera Depan';
             }
 
-            // Mulai kamera sesuai facingMode. Kalau gagal, coba mode sebaliknya sebagai fallback.
             function startScanner(facingMode) {
                 const fallbackMode = facingMode === 'environment' ? 'user' : 'environment';
-
-                return html5QrCode.start({
-                        facingMode
-                    }, config, qrCodeSuccessCallback)
+                return html5QrCode.start({ facingMode }, config, qrCodeSuccessCallback)
                     .then(() => {
                         currentFacingMode = facingMode;
                         localStorage.setItem(CAMERA_STORAGE_KEY, currentFacingMode);
                         updateCameraLabel();
                     })
-                    .catch(err => {
-                        console.log(`Kamera (${facingMode}) tidak tersedia, mencoba (${fallbackMode})...`, err);
-                        return html5QrCode.start({
-                                facingMode: fallbackMode
-                            }, config, qrCodeSuccessCallback)
+                    .catch(() => {
+                        return html5QrCode.start({ facingMode: fallbackMode }, config, qrCodeSuccessCallback)
                             .then(() => {
                                 currentFacingMode = fallbackMode;
                                 localStorage.setItem(CAMERA_STORAGE_KEY, currentFacingMode);
                                 updateCameraLabel();
-                            })
-                            .catch(err2 => {
-                                console.log("Kamera tidak ditemukan, berpindah ke mode manual testing.",
-                                    err2);
                             });
                     });
             }
@@ -315,7 +534,7 @@
             updateCameraLabel();
             startScanner(currentFacingMode);
 
-            // 5. Tombol Switch Kamera Depan / Belakang
+            // F. Tombol Switch Kamera
             if (btnSwitchCamera) {
                 btnSwitchCamera.addEventListener('click', function() {
                     if (isSwitchingCamera) return;
@@ -323,10 +542,9 @@
                     btnSwitchCamera.disabled = true;
 
                     const nextFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
-
                     html5QrCode.stop()
                         .then(() => html5QrCode.clear())
-                        .catch(() => {}) // aman diabaikan kalau kamera memang belum jalan
+                        .catch(() => {})
                         .finally(() => {
                             startScanner(nextFacingMode).finally(() => {
                                 isSwitchingCamera = false;
@@ -337,4 +555,5 @@
             }
         });
     </script>
-@endsection
+</body>
+</html>
