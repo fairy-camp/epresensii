@@ -425,7 +425,8 @@
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "X-CSRF-TOKEN": "{{ csrf_token() }}"
+                        "X-CSRF-TOKEN": "{{ csrf_token() }}",
+                        "Accept": "application/json"
                     },
                     body: JSON.stringify({
                         qr_code: decodedText,
@@ -433,13 +434,20 @@
                         longitude: currentLng
                     })
                 })
-                .then(response => response.json())
+                .then(async (response) => {
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(data.message || `Server Error (${response.status})`);
+                    }
+                    
+                    return data;
+                })
                 .then(data => {
                     if (data.status === 'success' || data.status === 'warning') {
                         const teacherName = data.teacher || 'Pengguna';
                         let voiceText = '';
 
-                        // Cek kondisi keterlambatan, pulang, atau masuk
                         const isLate = data.is_late || (data.message && data.message.toLowerCase().includes('terlambat'));
                         const isPulang = data.type === 'pulang' || (data.message && data.message.toLowerCase().includes('pulang'));
 
@@ -451,10 +459,8 @@
                             voiceText = `Selamat Datang ${teacherName}`;
                         }
 
-                        // Putar Suara Ucapan
                         speakText(voiceText);
 
-                        // Tampilkan Popup Notifikasi Visual
                         if (data.status === 'success') {
                             showPopup('bg-success text-white', '<i class="fas fa-check-circle fa-3x"></i>', `${data.message}<br><small class="fw-normal fs-6">${data.teacher ?? ''} (${data.time ?? ''})</small>`);
                         } else {
@@ -466,27 +472,19 @@
                         showPopup('bg-danger text-white', '<i class="fas fa-times-circle fa-3x"></i>', data.message);
                     }
 
-                    // Tahan Popup 2 Detik agar ucapan selesai
                     setTimeout(() => { 
                         hidePopup();
                         isProcessing = false; 
                     }, 2000);
                 })
-                // .catch(() => {
-                //     showPopup('bg-danger text-white', '<i class="fas fa-wifi fa-3x"></i>', 'Koneksi Terganggu!');
-                //     setTimeout(() => { 
-                //         hidePopup();
-                //         isProcessing = false; 
-                //     }, 1200);
-                // });
-
-                // Contoh jika menggunakan fetch:
                 .catch(error => {
                     console.error('Error detail:', error);
-                    alert('Error Detail: ' + error.message); // Tampilkan alert agar terlihat di HP
+                    showPopup('bg-danger text-white', '<i class="fas fa-exclamation-triangle fa-3x"></i>', error.message);
+                    setTimeout(() => { 
+                        hidePopup();
+                        isProcessing = false; 
+                    }, 2500);
                 });
-
-
             };
 
             // D. Listener Form Input Manual

@@ -10,86 +10,101 @@ use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
-    // Menampilkan Halaman Filter & Rekap Laporan
+    /**
+     * Menampilkan Halaman Filter & Matriks Laporan Presensi Bulanan
+     */
     public function index(Request $request)
     {
-        // Default Filter: Tanggal awal bulan ini s/d hari ini
-        $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->toDateString());
-        $endDate   = $request->input('end_date', Carbon::now()->toDateString());
-        $teacherId = $request->input('teacher_id');
-        $status    = $request->input('status');
+        // Filter Bulan & Tahun (Default: Bulan dan Tahun saat ini)
+        $month = (int) $request->input('month', Carbon::now()->month);
+        $year  = (int) $request->input('year', Carbon::now()->year);
 
-        // Query Dasar Presensi
-        $query = AttendanceRecord::with(['teacher.position', 'shiftAssignment.workSchedule'])
-            ->whereBetween('date', [$startDate, $endDate]);
+        // Hitung jumlah hari dalam bulan terpilih (28, 29, 30, atau 31 hari)
+        $daysInMonth = Carbon::createFromDate($year, $month, 1)->daysInMonth;
 
-        // Filter Spesifik Guru
-        if ($teacherId) {
-            $query->where('teacher_id', $teacherId);
+        // Menyusun daftar tanggal 1 hingga akhir bulan serta penandaan hari Minggu
+        $days = [];
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $d);
+            $carbonDate = Carbon::parse($dateStr);
+            $days[$d] = [
+                'day'       => $d,
+                'date'      => $dateStr,
+                'is_sunday' => $carbonDate->isSunday(),
+            ];
         }
 
-        // Filter Spesifik Status (present / late)
-        if ($status) {
-            $query->where('status', $status);
-        }
-
-        $attendances = $query->orderBy('date', 'desc')
-            ->orderBy('check_in_time', 'desc')
+        // Ambil seluruh data guru aktif
+        $teachers = Teacher::where('is_active', true)
+            ->orderBy('full_name', 'asc')
             ->get();
 
-        // Hitung Ringkasan Statistik
-        $totalRecords = $attendances->count();
-        $totalPresent = $attendances->where('status', 'present')->count();
-        $totalLate    = $attendances->where('status', 'late')->count();
+        // Ambil seluruh data presensi pada bulan & tahun terpilih
+        $attendanceRecords = AttendanceRecord::whereYear('date', $year)
+            ->whereMonth('date', $month)
+            ->get();
 
-        // Data Master Guru untuk Dropdown Filter
-        $teachers = Teacher::where('is_active', true)->orderBy('full_name')->get();
+        // Petakan data presensi ke dalam array matriks [teacher_id][nomor_hari]
+        $matrix = [];
+        foreach ($attendanceRecords as $record) {
+            $dayNum = (int) Carbon::parse($record->date)->format('j');
+            $matrix[$record->teacher_id][$dayNum] = $record;
+        }
 
         return view('reports.attendance', compact(
-            'attendances',
             'teachers',
-            'startDate',
-            'endDate',
-            'teacherId',
-            'status',
-            'totalRecords',
-            'totalPresent',
-            'totalLate'
+            'days',
+            'month',
+            'year',
+            'matrix'
         ));
     }
 
-    // Mencetak Laporan (Print / PDF View)
+    /**
+     * Mengarahkan ke tampilan cetak / cetak PDF
+     */
     public function print(Request $request)
     {
-        $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->toDateString());
-        $endDate   = $request->input('end_date', Carbon::now()->toDateString());
-        $teacherId = $request->input('teacher_id');
-        $status    = $request->input('status');
+        $school = SchoolSetting::first();
 
-        $query = AttendanceRecord::with(['teacher.position', 'shiftAssignment.workSchedule'])
-            ->whereBetween('date', [$startDate, $endDate]);
+        // Menggunakan logika query matriks yang sama dengan index
+        $month = (int) $request->input('month', Carbon::now()->month);
+        $year  = (int) $request->input('year', Carbon::now()->year);
 
-        if ($teacherId) {
-            $query->where('teacher_id', $teacherId);
+        $daysInMonth = Carbon::createFromDate($year, $month, 1)->daysInMonth;
+
+        $days = [];
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $d);
+            $carbonDate = Carbon::parse($dateStr);
+            $days[$d] = [
+                'day'       => $d,
+                'date'      => $dateStr,
+                'is_sunday' => $carbonDate->isSunday(),
+            ];
         }
 
-        if ($status) {
-            $query->where('status', $status);
-        }
-
-        $attendances = $query->orderBy('date', 'asc')
-            ->orderBy('check_in_time', 'asc')
+        $teachers = Teacher::where('is_active', true)
+            ->orderBy('full_name', 'asc')
             ->get();
 
-        $school = SchoolSetting::first();
-        $selectedTeacher = $teacherId ? Teacher::find($teacherId) : null;
+        $attendanceRecords = AttendanceRecord::whereYear('date', $year)
+            ->whereMonth('date', $month)
+            ->get();
 
-        return view('reports.print', compact(
-            'attendances',
-            'school',
-            'startDate',
-            'endDate',
-            'selectedTeacher'
+        $matrix = [];
+        foreach ($attendanceRecords as $record) {
+            $dayNum = (int) Carbon::parse($record->date)->format('j');
+            $matrix[$record->teacher_id][$dayNum] = $record;
+        }
+
+        return view('reports.attendance', compact(
+            'teachers',
+            'days',
+            'month',
+            'year',
+            'matrix',
+            'school'
         ));
     }
 }

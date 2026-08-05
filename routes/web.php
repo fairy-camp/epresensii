@@ -24,9 +24,7 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-    // ----------------------------------------------------------------------
     // ROOT ROUTE (/) -> Dynamic Redirect Berdasarkan Role Pengguna
-    // ----------------------------------------------------------------------
     Route::get('/', function () {
         $role = auth()->user()->role ?? '';
 
@@ -37,17 +35,13 @@ Route::middleware('auth')->group(function () {
         };
     });
 
-    // ----------------------------------------------------------------------
-    // A. Akses Scanner Presensi Khusus Petugas (Tampilan Standalone Mobile)
-    // ----------------------------------------------------------------------
+    // A. Akses Scanner Presensi Khusus Petugas
     Route::middleware('role:petugas')->group(function () {
         Route::get('/attendance/scan', [AttendanceController::class, 'scanPage'])->name('attendance.scan');
         Route::post('/attendance/process', [AttendanceController::class, 'processScan'])->name('attendance.process');
     });
 
-    // ----------------------------------------------------------------------
     // B. Akses Lihat Data & Laporan (Role: Super Admin, Admin, Kepala Sekolah, Waka)
-    // ----------------------------------------------------------------------
     Route::middleware('role:super_admin,admin,kepala_sekolah,waka')->group(function () {
         // Dashboard
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -58,14 +52,12 @@ Route::middleware('auth')->group(function () {
         // Data Presensi (Hanya Melihat Daftar)
         Route::get('/attendances', [AttendanceController::class, 'index'])->name('attendances.index');
 
-        // Laporan Presensi
+        // Laporan Presensi Matriks Bulanan
         Route::get('/reports/attendance', [ReportController::class, 'index'])->name('reports.attendance');
         Route::get('/reports/attendance/print', [ReportController::class, 'print'])->name('reports.attendance.print');
     });
 
-    // ----------------------------------------------------------------------
     // C. Akses Manajemen & Master Data (HANYA Super Admin & Admin)
-    // ----------------------------------------------------------------------
     Route::middleware('role:super_admin,admin')->group(function () {
         // Master Teachers CRUD
         Route::post('/teachers', [TeacherController::class, 'store'])->name('teachers.store');
@@ -94,9 +86,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/settings/school', [SchoolSettingController::class, 'update'])->name('settings.school.update');
     });
 
-    // ----------------------------------------------------------------------
     // D. Akses Histori Presensi Mandiri (Guru & Staf)
-    // ----------------------------------------------------------------------
     Route::middleware('role:guru,kepala_sekolah,waka,satpam,staff')->group(function () {
         Route::get('/my-attendance-history', [AttendanceController::class, 'myHistory'])->name('attendance.my-history');
     });

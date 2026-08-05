@@ -53,11 +53,11 @@ class AttendanceController extends Controller
             ], 422);
         }
 
-        // 2. CEK VALIDITAS QR CODE ATAU NIP GURU
+        // 2. Cek Validitas QR Code atau NIP Guru
         $qr = QrCode::where('code', $request->qr_code)->where('is_active', true)->first();
 
         if (!$qr) {
-            // Jika tidak ditemukan berdasarkan Kode QR, coba cari via NIP Guru
+            // Jika tidak ditemukan via Kode QR, coba cari via NIP Guru
             $teacherByNip = Teacher::where('nip', $request->qr_code)->first();
             if ($teacherByNip) {
                 $qr = QrCode::where('teacher_id', $teacherByNip->id)->where('is_active', true)->first();
@@ -98,20 +98,22 @@ class AttendanceController extends Controller
 
         $schedule = $shiftAssignment->workSchedule;
 
-        // 4. Cek Data Presensi Hari Ini
+        // 4. CEK DATA PRESENSI HARI INI (Strict Filter Tanggal Hari Ini)
         $attendance = AttendanceRecord::where('teacher_id', $teacher->id)
-            ->where('date', $today)
+            ->where('shift_assignment_id', $shiftAssignment->id)
+            ->whereDate('date', $today)
             ->first();
 
         // =========================================================================
-        // SKENARIO A: BELUM PRESENSI MASUK -> CATAT MASUK (CHECK-IN)
+        // SKENARIO A: BELUM PRESENSI MASUK HARI INI -> CATAT MASUK (CHECK-IN)
         // =========================================================================
         if (!$attendance) {
             // Cek keterlambatan berdasarkan jam masuk di WorkSchedule
             $status = ($currentTime > $schedule->check_in_time) ? 'late' : 'present';
+            $isLate = ($status === 'late');
 
             $attendance = AttendanceRecord::create([
-                'id'                  => Str::uuid(),
+                'id'                  => (string) Str::uuid(),
                 'teacher_id'          => $teacher->id,
                 'shift_assignment_id' => $shiftAssignment->id,
                 'work_schedule_id'    => $schedule->id,
@@ -122,11 +124,12 @@ class AttendanceController extends Controller
                 'longitude'           => $request->longitude,
             ]);
 
-            $statusText = ($status === 'late') ? 'Terlambat' : 'Tepat Waktu';
+            $statusText = $isLate ? 'Terlambat' : 'Tepat Waktu';
 
             return response()->json([
                 'status'   => 'success',
-                'type'     => 'check_in',
+                'type'     => 'masuk',
+                'is_late'  => $isLate,
                 'message'  => "Presensi MASUK Berhasil! ({$statusText})",
                 'teacher'  => $teacher->full_name,
                 'time'     => $currentTime,
@@ -146,7 +149,7 @@ class AttendanceController extends Controller
 
             return response()->json([
                 'status'   => 'success',
-                'type'     => 'check_out',
+                'type'     => 'pulang',
                 'message'  => 'Presensi PULANG Berhasil!',
                 'teacher'  => $teacher->full_name,
                 'time'     => $currentTime,
@@ -159,8 +162,9 @@ class AttendanceController extends Controller
         // =========================================================================
         return response()->json([
             'status'  => 'warning',
+            'teacher' => $teacher->full_name,
             'message' => 'Anda sudah melakukan presensi masuk dan pulang untuk hari ini.'
-        ], 400);
+        ], 200);
     }
 
     /**
@@ -192,19 +196,18 @@ class AttendanceController extends Controller
     {
         $user = auth()->user();
 
-        // 1. Cari data guru berdasarkan user_id saja
+        // Cari data guru berdasarkan user_id
         $teacher = Teacher::where('user_id', $user->id)->first();
 
-        // Jika akun user tidak/belum terhubung dengan data guru
         if (!$teacher) {
             return redirect()->back()->with('error', 'Data profil guru tidak terhubung dengan akun Anda. Silakan hubungi Admin.');
         }
 
-        // 2. Filter Bulan & Tahun (Default: Bulan dan Tahun saat ini)
-        $month = $request->input('month', \Carbon\Carbon::now()->format('m'));
-        $year  = $request->input('year', \Carbon\Carbon::now()->format('Y'));
+        // Filter Bulan & Tahun
+        $month = $request->input('month', Carbon::now()->format('m'));
+        $year  = $request->input('year', Carbon::now()->format('Y'));
 
-        // 3. Ambil data presensi khusus guru tersebut
+        // Ambil data presensi khusus guru tersebut
         $attendances = AttendanceRecord::with('shiftAssignment.workSchedule')
             ->where('teacher_id', $teacher->id)
             ->whereMonth('date', $month)
@@ -212,7 +215,7 @@ class AttendanceController extends Controller
             ->orderBy('date', 'desc')
             ->get();
 
-        // 4. Hitung Ringkasan Statistik Kehadiran Guru
+        // Hitung Ringkasan Statistik Kehadiran Guru
         $totalPresent = $attendances->where('status', 'present')->count();
         $totalLate    = $attendances->where('status', 'late')->count();
         $totalRecords = $attendances->count();
@@ -228,12 +231,11 @@ class AttendanceController extends Controller
         ));
     }
 
-    // 1. Menampilkan Semua Data Presensi + Filter Tanggal
+    // Menampilkan Semua Data Presensi + Filter Tanggal (Admin)
     public function index(Request $request)
     {
-        $date = $request->input('date', \Carbon\Carbon::now()->format('Y-m-d'));
+        $date = $request->input('date', Carbon::now()->format('Y-m-d'));
 
-        // Ambil seluruh data presensi berdasarkan tanggal agar DataTables berfungsi penuh
         $attendances = AttendanceRecord::with('teacher')
             ->whereDate('date', $date)
             ->latest('check_in_time')
@@ -242,10 +244,9 @@ class AttendanceController extends Controller
         return view('attendance.index', compact('attendances', 'date'));
     }
 
-    // 2. Memperbarui Data Presensi (Via Modal Edit)
+    // Memperbarui Data Presensi (Via Modal Edit Admin)
     public function update(Request $request, $id)
     {
-        // Proteksi Keamanan Tambahan (Server-side check)
         if (!in_array(auth()->user()->role, ['super_admin', 'admin'])) {
             abort(403, 'Anda tidak memiliki hak akses untuk mengedit data presensi.');
         }
@@ -269,9 +270,9 @@ class AttendanceController extends Controller
         return redirect()->back()->with('success', 'Data presensi berhasil diperbarui!');
     }
 
+    // Menghapus Data Presensi (Admin)
     public function destroy($id)
     {
-        // Proteksi Keamanan Tambahan (Server-side check)
         if (!in_array(auth()->user()->role, ['super_admin', 'admin'])) {
             abort(403, 'Anda tidak memiliki hak akses untuk menghapus data presensi.');
         }
