@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Teacher extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory;
 
     protected $fillable = [
         'user_id',
@@ -75,5 +75,13 @@ class Teacher extends Model
     public function attendanceRecords(): HasMany
     {
         return $this->hasMany(AttendanceRecord::class, 'teacher_id');
+    }
+    
+    /**
+     * Relasi ke Riwayat Apel Pagi
+     */
+    public function apelAttendances()
+    {
+        return $this->hasMany(ApelAttendance::class, 'teacher_id');
     }
 }

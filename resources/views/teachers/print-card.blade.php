@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cetak ID Card Guru - SMK UP RPL CodePelita</title>
+    <title>Download ID Card Presensi - SMK Syafi'i Akrom</title>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- html2canvas untuk Ekspor Gambar HD -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
         * {
@@ -20,12 +22,12 @@
             padding: 20px;
         }
 
-        /* Toolbar Top Action */
-        .no-print {
+        /* Top Action Toolbar */
+        .toolbar {
             background: #ffffff;
             padding: 15px 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
             margin-bottom: 25px;
             display: flex;
             justify-content: space-between;
@@ -42,232 +44,176 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            font-size: 13px;
         }
 
-        .btn-primary { background: #007bff; color: #fff; }
+        .btn-primary { background: #0d6efd; color: #fff; }
+        .btn-success { background: #198754; color: #fff; }
         .btn-secondary { background: #6c757d; color: #fff; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
 
-        /* Container Kartu Grid */
+        /* Container Grid Kartu */
         .card-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, 86mm);
-            gap: 15mm;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
             justify-content: center;
         }
 
-        /* Desain Fisik Kartu (Ukuran CR80: 86mm x 54mm) */
-        .id-card {
-            width: 86mm;
-            height: 54mm;
-            background: #ffffff;
-            border-radius: 6mm;
-            border: 1px solid #dcdcdc;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.08);
-            position: relative;
-            overflow: hidden;
+        .card-wrapper {
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-            page-break-inside: avoid;
-        }
-
-        /* Header Kartu */
-        .card-header {
-            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
-            color: #ffffff;
-            padding: 5px 10px;
-            text-align: center;
-            border-bottom: 2px solid #ffc107;
-        }
-
-        .card-header h2 {
-            font-size: 10pt;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-        }
-
-        .card-header p {
-            font-size: 6.5pt;
-            opacity: 0.9;
-        }
-
-        /* Body Kartu */
-        .card-body {
-            display: flex;
-            padding: 6px 10px;
             align-items: center;
-            gap: 8px;
-            flex-grow: 1;
+            gap: 12px;
         }
 
-        .avatar-box {
-            width: 22mm;
-            height: 28mm;
+        /* Dimensi Kartu Tegak */
+        .id-card {
+            width: 58mm;
+            height: 82mm;
+            position: relative;
+            /* Path disesuaikan ke folder public/img/ */
+            background-image: url("{{ asset('img/format-kartu.png') }}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
             border-radius: 4px;
-            border: 1px solid #ced4da;
-            background: #e9ecef;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
             overflow: hidden;
-            flex-shrink: 0;
         }
 
-        .avatar-box img {
+        /* Position Overlay 1: Banner Nama & ID */
+        .identity-box {
+            position: absolute;
+            top: 31.2%;
+            left: 0;
             width: 100%;
-            height: 100%;
-            object-fit: cover;
+            height: 10.2%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: #ffffff;
+            padding: 0 5px;
         }
 
-        .teacher-info {
-            flex-grow: 1;
-        }
-
-        .teacher-info .name {
+        .identity-box .name {
             font-size: 8.5pt;
             font-weight: 700;
-            color: #212529;
-            margin-bottom: 2px;
             line-height: 1.1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 95%;
         }
 
-        .teacher-info .nip {
+        .identity-box .id-number {
             font-size: 7.5pt;
-            color: #495057;
-            margin-bottom: 3px;
-        }
-
-        .teacher-info .position-badge {
-            display: inline-block;
-            font-size: 6pt;
-            background: #e7f1ff;
-            color: #0d6efd;
-            padding: 2px 6px;
-            border-radius: 3px;
             font-weight: 600;
+            margin-top: 1px;
         }
 
-        /* Container QR Code */
-        .qr-box {
-            width: 20mm;
-            height: 20mm;
+        /* Position Overlay 2: Container QR Code */
+        .qr-container {
+            position: absolute;
+            top: 43.1%;
+            left: 20.2%;
+            width: 59.6%;
+            height: 42.1%;
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-shrink: 0;
-            background: #fff;
-            padding: 2px;
-            border: 1px dashed #adb5bd;
-            border-radius: 4px;
         }
 
-        .qr-box svg, .qr-box img {
-            max-width: 100%;
-            max-height: 100%;
-        }
-
-        /* Footer Kartu */
-        .card-footer {
-            background: #f8f9fa;
-            border-top: 1px solid #e9ecef;
-            padding: 3px 10px;
-            font-size: 5.5pt;
-            color: #6c757d;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        /* CSS KHUSUS PRINT */
-        @media print {
-            body {
-                background: none;
-                padding: 0;
-            }
-
-            .no-print {
-                display: none !important;
-            }
-
-            .card-container {
-                display: grid;
-                grid-template-columns: repeat(2, 86mm);
-                gap: 10mm 8mm;
-                margin: 0 auto;
-            }
-
-            .id-card {
-                box-shadow: none;
-                border: 1px solid #000; /* Border lebih tegas saat diprint */
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
+        .qr-container svg, .qr-container img {
+            width: 88% !important;
+            height: 88% !important;
+            object-fit: contain;
         }
     </style>
 </head>
 <body>
 
-    <!-- Panel Tombol Aksi -->
-    <div class="no-print">
+    <!-- Bar Aksi Atas -->
+    <div class="toolbar">
         <div>
-            <h3 style="margin-bottom: 4px;">Cetak ID Card Presensi</h3>
-            <p style="color: #6c757d; font-size: 14px;">Total kartu: <strong>{{ count($teachers) }} kartu</strong></p>
+            <h3 style="margin-bottom: 2px; color: #212529;">Download Kartu Presensi</h3>
+            <p style="color: #6c757d; font-size: 13px;">Total kartu: <strong>{{ count($teachers) }} Pegawai</strong></p>
         </div>
-        <div>
+        <div style="display: flex; gap: 10px;">
             <a href="{{ route('teachers.index') }}" class="btn btn-secondary">
                 <i class="fas fa-arrow-left"></i> Kembali
             </a>
-            <button onclick="window.print()" class="btn btn-primary">
-                <i class="fas fa-print"></i> Cetak / Simpan PDF
+            <!-- Tombol selalu ditampilkan tanpa kondisi if -->
+            <button onclick="downloadAllCards()" class="btn btn-primary">
+                <i class="fas fa-download"></i> Download Kartu
             </button>
         </div>
     </div>
 
-    <!-- Grid Kartu ID Card -->
+    <!-- Daftar Kartu Presensi -->
     <div class="card-container">
         @foreach($teachers as $teacher)
-            <div class="id-card">
-                <!-- Header -->
-                <div class="card-header">
-                    <h2>KARTU PRESENSI PEGAWAI</h2>
-                    <p>SMK UP RPL CODEPELITA</p>
-                </div>
-
-                <!-- Body Info -->
-                <div class="card-body">
-                    <!-- Foto / Avatar Default -->
-                    <div class="avatar-box">
-                        <i class="fas fa-user fa-2x text-secondary"></i>
+            <div class="card-wrapper">
+                <!-- Fisik Kartu ID Card -->
+                <div class="id-card" id="card-{{ $teacher->id }}">
+                    
+                    <!-- Overlay Nama & ID/NIP -->
+                    <div class="identity-box">
+                        <div class="name" title="{{ $teacher->full_name }}">{{ $teacher->full_name }}</div>
+                        <div class="id-number">id : {{ $teacher->id }}</div>
                     </div>
 
-                    <!-- Informasi Bio -->
-                    <div class="teacher-info">
-                        <div class="name">{{ $teacher->full_name }}</div>
-                        <div class="nip">NIP: {{ $teacher->nip ?? '-' }}</div>
-                        <div class="position-badge">
-                            {{ $teacher->position->name ?? 'Pegawai' }}
-                        </div>
-                    </div>
-
-                    <!-- Scan QR Code -->
-                    <div class="qr-box">
+                    <!-- Overlay QR Code -->
+                    <div class="qr-container">
                         @if($teacher->activeQrCode)
-                            {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(70)->margin(0)->generate($teacher->activeQrCode->code) !!}
+                            {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(200)->margin(0)->generate($teacher->activeQrCode->code) !!}
                         @else
-                            {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(70)->margin(0)->generate($teacher->nip ?? $teacher->id) !!}
+                            {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(200)->margin(0)->generate($teacher->nip ?? $teacher->id) !!}
                         @endif
                     </div>
+
                 </div>
 
-                <!-- Footer -->
-                <div class="card-footer">
-                    <span>E-Presensi System</span>
-                    <span>Valid QR Code</span>
-                </div>
+                <!-- Tombol Download Satuan per Orang -->
+                <button class="btn btn-success btn-sm" onclick="downloadSingleCard('card-{{ $teacher->id }}', 'Kartu_Presensi_{{ \Illuminate\Support\Str::slug($teacher->full_name) }}')">
+                    <i class="fas fa-image"></i> Download PNG
+                </button>
             </div>
         @endforeach
     </div>
 
+    <script>
+        function downloadSingleCard(elementId, fileName) {
+            const cardElement = document.getElementById(elementId);
+
+            html2canvas(cardElement, {
+                scale: 4,
+                useCORS: true,
+                backgroundColor: null,
+                logging: false
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = fileName + '.png';
+                link.href = canvas.toDataURL('image/png', 1.0);
+                link.click();
+            });
+        }
+
+        async function downloadAllCards() {
+            const wrappers = document.querySelectorAll('.card-wrapper');
+            
+            for (let index = 0; index < wrappers.length; index++) {
+                const card = wrappers[index].querySelector('.id-card');
+                const cardId = card.getAttribute('id');
+                const nameText = card.querySelector('.name').innerText.trim().replace(/[^a-zA-Z0-9]/g, '_');
+                
+                downloadSingleCard(cardId, 'Kartu_Presensi_' + nameText);
+                
+                await new Promise(resolve => setTimeout(resolve, 400));
+            }
+        }
+    </script>
 </body>
 </html>

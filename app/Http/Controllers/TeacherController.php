@@ -187,26 +187,26 @@ class TeacherController extends Controller
     }
 
     // Cetak ID Card Satuan
-    public function printCard($id)
-    {
-        $teacher = Teacher::with(['position', 'activeQrCode'])->findOrFail($id);
+    // public function printCard($id)
+    // {
+    //     $teacher = Teacher::with(['position', 'activeQrCode'])->findOrFail($id);
 
-        return view('teachers.print-card', [
-            'teachers' => collect([$teacher])
-        ]);
-    }
+    //     return view('teachers.print-card', [
+    //         'teachers' => collect([$teacher])
+    //     ]);
+    // }
 
     // Cetak ID Card Massal
-    public function printAllCards()
-    {
-        $teachers = Teacher::with(['position', 'activeQrCode'])
-            ->where('is_active', true)
-            ->get();
+    // public function printAllCards()
+    // {
+    //     $teachers = Teacher::with(['position', 'activeQrCode'])
+    //         ->where('is_active', true)
+    //         ->get();
 
-        if ($teachers->isEmpty()) {
-            return back()->with('error', 'Tidak ada data guru aktif untuk dicetak.');
-        }
+    //     if ($teachers->isEmpty()) {
+    //         return back()->with('error', 'Tidak ada data guru aktif untuk dicetak.');
+    //     }
 
-        return view('teachers.print-card', compact('teachers'));
-    }
+    //     return view('teachers.print-card', compact('teachers'));
+    // }
 }

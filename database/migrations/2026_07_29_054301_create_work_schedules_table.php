@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('work_schedules', function (Blueprint $table) {
-            $table->uuid('id')->primary();
+            $table->id();
             $table->string('name', 100);
             $table->enum('type', ['fixed', 'shift']);
             $table->time('check_in_time');

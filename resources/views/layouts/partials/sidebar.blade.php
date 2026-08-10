@@ -72,6 +72,14 @@
                         </a>
                     </li>
 
+                    <!-- Menu Presensi Apel Pagi -->
+                    <li class="nav-item">
+                        <a href="{{ route('apel.index') }}" class="nav-link {{ request()->routeIs('apel.*') ? 'active' : '' }}">
+                            <i class="nav-icon fas fa-flag"></i>
+                            <p>Presensi Apel Pagi</p>
+                        </a>
+                    </li>
+
                     <!-- Jam Kerja & Shift (Khusus SuperAdmin & Admin) -->
                     @if(in_array($userRole, ['super_admin', 'admin']))
                         <li class="nav-item">
@@ -93,21 +101,30 @@
                     <li class="nav-header">REKAP & PENGATURAN</li>
 
                     <!-- Laporan Presensi (SuperAdmin, Admin, Kepsek, Wakakur) -->
+                    <!-- Laporan Presensi Harian -->
                     <li class="nav-item">
-                        <a href="{{ route('reports.attendance') }}" class="nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}">
+                        <a href="{{ route('reports.attendance') }}" class="nav-link {{ request()->routeIs('reports.attendance*') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-file-alt"></i>
                             <p>Laporan Presensi</p>
                         </a>
                     </li>
 
+                    <!-- Laporan Presensi Apel -->
+                    <li class="nav-item">
+                        <a href="{{ route('reports.apel') }}" class="nav-link {{ request()->routeIs('reports.apel*') ? 'active' : '' }}">
+                            <i class="nav-icon fas fa-flag"></i>
+                            <p>Laporan Apel</p>
+                        </a>
+</li>
+
                     <!-- Pengaturan Sistem (Khusus SuperAdmin & Admin) -->
                     @if(in_array($userRole, ['super_admin', 'admin']))
-                        <li class="nav-item">
+                        <!-- <li class="nav-item">
                             <a href="#" class="nav-link">
                                 <i class="nav-icon fas fa-history"></i>
                                 <p>Audit Logs</p>
                             </a>
-                        </li>
+                        </li> -->
 
                         <li class="nav-item">
                             <a href="{{ route('settings.school.index') }}" class="nav-link {{ request()->routeIs('settings.school.*') ? 'active' : '' }}">

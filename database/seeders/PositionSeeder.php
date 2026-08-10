@@ -13,37 +13,13 @@ class PositionSeeder extends Seeder
             [
                 'name' => 'Kepala Sekolah',
                 'role_type' => 'kepala_sekolah',
-                'description' => 'Kepala Sekolah Utama',
+                'description' => 'Kepala Sekolah',
                 'is_management' => true,
             ],
             [
-                'name' => 'Waka Kurikulum',
+                'name' => 'Waka',
                 'role_type' => 'waka',
-                'description' => 'Wakil Kepala Sekolah Bidang Kurikulum',
-                'is_management' => true,
-            ],
-            [
-                'name' => 'Waka Kesiswaan',
-                'role_type' => 'waka',
-                'description' => 'Wakil Kepala Sekolah Bidang Kesiswaan',
-                'is_management' => true,
-            ],
-            [
-                'name' => 'Waka Sarana Prasarana',
-                'role_type' => 'waka',
-                'description' => 'Wakil Kepala Sekolah Bidang Sarpras',
-                'is_management' => true,
-            ],
-            [
-                'name' => 'Waka Humas',
-                'role_type' => 'waka',
-                'description' => 'Wakil Kepala Sekolah Bidang Hubungan Masyarakat',
-                'is_management' => true,
-            ],
-            [
-                'name' => 'Kepala Kompetensi RPL',
-                'role_type' => 'kepala_kompetensi',
-                'description' => 'Kepala Program Keahlian RPL',
+                'description' => 'Wakil Kepala Sekolah',
                 'is_management' => true,
             ],
             [
@@ -53,15 +29,21 @@ class PositionSeeder extends Seeder
                 'is_management' => false,
             ],
             [
-                'name' => 'Staff Waka Kurikulum',
-                'role_type' => 'staff_waka',
-                'description' => 'Guru Pembantu Waka Kurikulum',
+                'name' => 'Staff dan Karyawan',
+                'role_type' => 'staff',
+                'description' => 'Staff dan Karyawan',
                 'is_management' => false,
             ],
             [
                 'name' => 'Satpam / Security',
-                'role_type' => 'petugas',
+                'role_type' => 'satpam',
                 'description' => 'Petugas Keamanan Sekolah',
+                'is_management' => false,
+            ],
+            [
+                'name' => 'Petugas Presensi',
+                'role_type' => 'petugas',
+                'description' => 'Petugas Presensi',
                 'is_management' => false,
             ],
         ];

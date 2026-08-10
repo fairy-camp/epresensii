@@ -8,6 +8,7 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\WorkScheduleController;
 use App\Http\Controllers\ShiftAssignmentController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ApelAttendanceController;
 use Illuminate\Support\Facades\Route;
 
 // --------------------------------------------------------------------------
@@ -37,8 +38,13 @@ Route::middleware('auth')->group(function () {
 
     // A. Akses Scanner Presensi Khusus Petugas
     Route::middleware('role:petugas')->group(function () {
+        // Scanner Presensi Harian
         Route::get('/attendance/scan', [AttendanceController::class, 'scanPage'])->name('attendance.scan');
         Route::post('/attendance/process', [AttendanceController::class, 'processScan'])->name('attendance.process');
+
+        // Scanner Presensi Apel Pagi
+        Route::get('/apel/scan', [ApelAttendanceController::class, 'scanPage'])->name('apel.scan');
+        Route::post('/apel/scan/process', [ApelAttendanceController::class, 'processScan'])->name('apel.scan.process');
     });
 
     // B. Akses Lihat Data & Laporan (Role: Super Admin, Admin, Kepala Sekolah, Waka)
@@ -49,12 +55,19 @@ Route::middleware('auth')->group(function () {
         // Data Guru (Hanya Melihat Daftar)
         Route::get('/teachers', [TeacherController::class, 'index'])->name('teachers.index');
 
-        // Data Presensi (Hanya Melihat Daftar)
+        // Data Presensi Harian (Hanya Melihat Daftar)
         Route::get('/attendances', [AttendanceController::class, 'index'])->name('attendances.index');
 
-        // Laporan Presensi Matriks Bulanan
+        // Data & Laporan Presensi Apel Pagi
+        Route::get('/apel/attendances', [ApelAttendanceController::class, 'index'])->name('apel.index');
+        
+        // Laporan Presensi Utama
         Route::get('/reports/attendance', [ReportController::class, 'index'])->name('reports.attendance');
-        Route::get('/reports/attendance/print', [ReportController::class, 'print'])->name('reports.attendance.print');
+        Route::get('/reports/attendance/pdf', [ReportController::class, 'exportAttendancePdf'])->name('reports.attendance.pdf');
+
+        // Laporan Presensi Apel
+        Route::get('/reports/apel', [ReportController::class, 'apelIndex'])->name('reports.apel');
+        Route::get('/reports/apel/pdf', [ReportController::class, 'exportApelPdf'])->name('reports.apel.pdf');
     });
 
     // C. Akses Manajemen & Master Data (HANYA Super Admin & Admin)
@@ -69,9 +82,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/teachers/{id}/print-card', [TeacherController::class, 'printCard'])->name('teachers.print-card');
         Route::post('/teachers/{id}/regenerate-qr', [TeacherController::class, 'regenerateQr'])->name('teachers.regenerate-qr');
 
-        // Edit & Hapus Data Presensi
+        // Edit & Hapus Data Presensi Harian
         Route::put('/attendances/{id}', [AttendanceController::class, 'update'])->name('attendances.update');
         Route::delete('/attendances/{id}', [AttendanceController::class, 'destroy'])->name('attendances.destroy');
+
+        // Edit & Hapus Data Presensi Apel
+        Route::delete('/apel/attendances/{id}', [ApelAttendanceController::class, 'destroy'])->name('apel.destroy');
 
         // Master Jadwal Kerja
         Route::resource('work-schedules', WorkScheduleController::class)->only(['index', 'store', 'update', 'destroy']);

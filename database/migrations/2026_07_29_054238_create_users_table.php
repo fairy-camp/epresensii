@@ -9,12 +9,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
-            $table->uuid('id')->primary();
+            $table->id();
             $table->string('email')->unique();
             $table->string('password');
             $table->enum('role', [
-                'super_admin', 'admin', 'guru', 'kepala_sekolah', 'waka', 'satpam', 'staff'
-            ]);
+                'super_admin', 'admin', 'guru', 'kepala_sekolah', 'waka', 'satpam', 'staff', 'petugas'
+            ])->default('guru');
             $table->string('role_keterangan')->nullable();
             $table->boolean('is_hidden')->default(false); // true khusus super_admin
             $table->boolean('is_active')->default(true);

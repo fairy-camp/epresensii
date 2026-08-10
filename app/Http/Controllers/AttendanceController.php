@@ -113,7 +113,6 @@ class AttendanceController extends Controller
             $isLate = ($status === 'late');
 
             $attendance = AttendanceRecord::create([
-                'id'                  => (string) Str::uuid(),
                 'teacher_id'          => $teacher->id,
                 'shift_assignment_id' => $shiftAssignment->id,
                 'work_schedule_id'    => $schedule->id,

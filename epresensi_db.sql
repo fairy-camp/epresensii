@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Jul 30, 2026 at 06:26 AM
--- Server version: 8.0.30
--- PHP Version: 8.4.23
+-- Generation Time: Aug 10, 2026 at 07:00 AM
+-- Server version: 8.4.3
+-- PHP Version: 8.4.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -24,13 +24,37 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `apel_attendances`
+--
+
+CREATE TABLE `apel_attendances` (
+  `id` bigint UNSIGNED NOT NULL,
+  `teacher_id` bigint UNSIGNED NOT NULL,
+  `date` date NOT NULL,
+  `scan_time` time NOT NULL,
+  `status` enum('present','late','absent') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'present',
+  `notes` text COLLATE utf8mb4_unicode_ci,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `apel_attendances`
+--
+
+INSERT INTO `apel_attendances` (`id`, `teacher_id`, `date`, `scan_time`, `status`, `notes`, `created_at`, `updated_at`) VALUES
+(1, 2, '2026-08-08', '11:22:12', 'late', NULL, '2026-08-08 04:22:12', '2026-08-08 04:22:12');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `attendance_records`
 --
 
 CREATE TABLE `attendance_records` (
-  `id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `teacher_id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `shift_assignment_id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` bigint UNSIGNED NOT NULL,
+  `teacher_id` bigint UNSIGNED NOT NULL,
+  `shift_assignment_id` bigint UNSIGNED NOT NULL,
   `date` date NOT NULL,
   `check_in_time` datetime DEFAULT NULL,
   `check_out_time` datetime DEFAULT NULL,
@@ -47,8 +71,8 @@ CREATE TABLE `attendance_records` (
 --
 
 CREATE TABLE `audit_logs` (
-  `id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `user_id` char(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `id` bigint UNSIGNED NOT NULL,
+  `user_id` bigint UNSIGNED DEFAULT NULL,
   `action` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `description` text COLLATE utf8mb4_unicode_ci,
   `ip_address` varchar(45) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -63,9 +87,9 @@ CREATE TABLE `audit_logs` (
 --
 
 CREATE TABLE `geolocation_logs` (
-  `id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `attendance_id` char(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `teacher_id` char(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `id` bigint UNSIGNED NOT NULL,
+  `attendance_id` bigint UNSIGNED DEFAULT NULL,
+  `teacher_id` bigint UNSIGNED DEFAULT NULL,
   `latitude` decimal(10,8) DEFAULT NULL,
   `longitude` decimal(11,8) DEFAULT NULL,
   `accuracy_meters` decimal(6,2) DEFAULT NULL,
@@ -103,7 +127,10 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
 (8, '2026_07_29_054454_create_attendance_records_table', 1),
 (9, '2026_07_29_054501_create_geolocation_logs_table', 1),
 (10, '2026_07_29_054508_create_audit_logs_table', 1),
-(11, '2026_07_29_060050_create_sessions_table', 1);
+(11, '2026_07_29_060050_create_sessions_table', 1),
+(12, '2026_08_04_125406_remove_date_from_shift_assignments_table', 1),
+(13, '2026_08_05_090906_fix_attendance_records_unique_index', 1),
+(14, '2026_08_08_084412_create_apel_attendances_table', 1);
 
 -- --------------------------------------------------------
 
@@ -112,9 +139,9 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
 --
 
 CREATE TABLE `positions` (
-  `id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` bigint UNSIGNED NOT NULL,
   `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `role_type` enum('guru','waka','kepala_sekolah','petugas','kepala_kompetensi','staff_waka') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `role_type` enum('kepala_sekolah','waka','guru','petugas','satpam','staff') COLLATE utf8mb4_unicode_ci NOT NULL,
   `description` text COLLATE utf8mb4_unicode_ci,
   `is_management` tinyint(1) NOT NULL DEFAULT '0',
   `created_at` timestamp NULL DEFAULT NULL,
@@ -126,15 +153,12 @@ CREATE TABLE `positions` (
 --
 
 INSERT INTO `positions` (`id`, `name`, `role_type`, `description`, `is_management`, `created_at`, `updated_at`) VALUES
-('019fb0db-3658-7177-afd0-f189f678c95a', 'Kepala Sekolah', 'kepala_sekolah', 'Kepala Sekolah Utama', 1, '2026-07-29 19:29:44', '2026-07-29 19:29:44'),
-('019fb0db-365a-708b-be90-250e1b688c09', 'Waka Kurikulum', 'waka', 'Wakil Kepala Sekolah Bidang Kurikulum', 1, '2026-07-29 19:29:44', '2026-07-29 19:29:44'),
-('019fb0db-365b-712e-9856-f24d07d8e473', 'Waka Kesiswaan', 'waka', 'Wakil Kepala Sekolah Bidang Kesiswaan', 1, '2026-07-29 19:29:44', '2026-07-29 19:29:44'),
-('019fb0db-365d-70ac-a9db-98ae3ee0f82d', 'Waka Sarana Prasarana', 'waka', 'Wakil Kepala Sekolah Bidang Sarpras', 1, '2026-07-29 19:29:44', '2026-07-29 19:29:44'),
-('019fb0db-365e-71c9-9f89-f8aa545029aa', 'Waka Humas', 'waka', 'Wakil Kepala Sekolah Bidang Hubungan Masyarakat', 1, '2026-07-29 19:29:44', '2026-07-29 19:29:44'),
-('019fb0db-3660-700b-97a1-2a7a079a77ba', 'Kepala Kompetensi RPL', 'kepala_kompetensi', 'Kepala Program Keahlian RPL', 1, '2026-07-29 19:29:44', '2026-07-29 19:29:44'),
-('019fb0db-3661-72e0-817d-15799ed44302', 'Guru Pengajar', 'guru', 'Guru Mata Pelajaran', 0, '2026-07-29 19:29:44', '2026-07-29 19:29:44'),
-('019fb0db-3662-7104-84c7-b74168e7583f', 'Staff Waka Kurikulum', 'staff_waka', 'Guru Pembantu Waka Kurikulum', 0, '2026-07-29 19:29:44', '2026-07-29 19:29:44'),
-('019fb0db-3664-714f-86e2-6459f2548705', 'Satpam / Security', 'petugas', 'Petugas Keamanan Sekolah', 0, '2026-07-29 19:29:44', '2026-07-29 19:29:44');
+(1, 'Kepala Sekolah', 'kepala_sekolah', 'Kepala Sekolah', 1, '2026-08-08 04:13:01', '2026-08-08 04:13:01'),
+(2, 'Waka', 'waka', 'Wakil Kepala Sekolah', 1, '2026-08-08 04:13:01', '2026-08-08 04:13:01'),
+(3, 'Guru Pengajar', 'guru', 'Guru Mata Pelajaran', 0, '2026-08-08 04:13:01', '2026-08-08 04:13:01'),
+(4, 'Staff dan Karyawan', 'staff', 'Staff dan Karyawan', 0, '2026-08-08 04:13:01', '2026-08-08 04:13:01'),
+(5, 'Satpam / Security', 'satpam', 'Petugas Keamanan Sekolah', 0, '2026-08-08 04:13:01', '2026-08-08 04:13:01'),
+(6, 'Petugas Presensi', 'petugas', 'Petugas Presensi', 0, '2026-08-08 04:13:01', '2026-08-08 04:13:01');
 
 -- --------------------------------------------------------
 
@@ -143,8 +167,8 @@ INSERT INTO `positions` (`id`, `name`, `role_type`, `description`, `is_managemen
 --
 
 CREATE TABLE `qr_codes` (
-  `id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `teacher_id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` bigint UNSIGNED NOT NULL,
+  `teacher_id` bigint UNSIGNED NOT NULL,
   `code` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT '1',
   `created_at` timestamp NULL DEFAULT NULL,
@@ -156,7 +180,9 @@ CREATE TABLE `qr_codes` (
 --
 
 INSERT INTO `qr_codes` (`id`, `teacher_id`, `code`, `is_active`, `created_at`, `updated_at`) VALUES
-('019fb0db-fb8f-70aa-891d-e548d4a71223', '019fb0db-fb8d-7327-adf8-90e826fc1a78', 'QR-NLMGFYMAHN-1785378634', 1, '2026-07-29 19:30:34', '2026-07-29 19:30:34');
+(1, 1, 'QR-DUKCS7IQXX-1786162853', 1, '2026-08-08 04:20:53', '2026-08-08 04:20:53'),
+(2, 2, 'QR-VQVNO6NJUW-1786162900', 1, '2026-08-08 04:21:40', '2026-08-08 04:21:40'),
+(3, 3, 'QR-FYGXMPMOEP-1786340805', 1, '2026-08-10 05:46:45', '2026-08-10 05:46:45');
 
 -- --------------------------------------------------------
 
@@ -165,7 +191,7 @@ INSERT INTO `qr_codes` (`id`, `teacher_id`, `code`, `is_active`, `created_at`, `
 --
 
 CREATE TABLE `school_settings` (
-  `id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` bigint UNSIGNED NOT NULL,
   `school_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `latitude` decimal(10,8) NOT NULL,
   `longitude` decimal(11,8) NOT NULL,
@@ -179,7 +205,7 @@ CREATE TABLE `school_settings` (
 --
 
 INSERT INTO `school_settings` (`id`, `school_name`, `latitude`, `longitude`, `geofence_radius`, `created_at`, `updated_at`) VALUES
-('019fb0db-3679-73ed-8635-8cd0ad285c13', 'SMK UP RPL CodePelita', -6.91534770, 109.66747661, 1000, '2026-07-29 19:29:44', '2026-07-29 20:09:49');
+(1, 'SMK Syafi\'i Akrom', -6.91425769, 109.66765112, 100, '2026-08-08 04:13:02', '2026-08-10 03:10:58');
 
 -- --------------------------------------------------------
 
@@ -203,13 +229,20 @@ CREATE TABLE `sessions` (
 --
 
 CREATE TABLE `shift_assignments` (
-  `id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `teacher_id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `work_schedule_id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `date` date NOT NULL,
+  `id` bigint UNSIGNED NOT NULL,
+  `teacher_id` bigint UNSIGNED NOT NULL,
+  `work_schedule_id` bigint UNSIGNED NOT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `shift_assignments`
+--
+
+INSERT INTO `shift_assignments` (`id`, `teacher_id`, `work_schedule_id`, `created_at`, `updated_at`) VALUES
+(1, 2, 1, '2026-08-10 05:46:58', '2026-08-10 05:46:58'),
+(2, 3, 1, '2026-08-10 05:46:58', '2026-08-10 05:46:58');
 
 -- --------------------------------------------------------
 
@@ -218,8 +251,8 @@ CREATE TABLE `shift_assignments` (
 --
 
 CREATE TABLE `teachers` (
-  `id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `user_id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` bigint UNSIGNED NOT NULL,
+  `user_id` bigint UNSIGNED NOT NULL,
   `nip` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `nik` varchar(16) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `nuptk` varchar(16) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -228,11 +261,11 @@ CREATE TABLE `teachers` (
   `gender` enum('L','P') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `photo` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `department` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `position_id` char(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `waka_id` char(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `position_id` bigint UNSIGNED DEFAULT NULL,
+  `waka_id` bigint UNSIGNED DEFAULT NULL,
   `tmt` date DEFAULT NULL,
   `phone` varchar(15) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `work_schedule_id` char(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `work_schedule_id` bigint UNSIGNED DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT '1',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
@@ -243,7 +276,9 @@ CREATE TABLE `teachers` (
 --
 
 INSERT INTO `teachers` (`id`, `user_id`, `nip`, `nik`, `nuptk`, `npy`, `full_name`, `gender`, `photo`, `department`, `position_id`, `waka_id`, `tmt`, `phone`, `work_schedule_id`, `is_active`, `created_at`, `updated_at`) VALUES
-('019fb0db-fb8d-7327-adf8-90e826fc1a78', '019fb0db-fb87-700e-b3e7-34e189233211', '332511', '333333333333', NULL, NULL, 'Guru 1', 'L', NULL, NULL, '019fb0db-3661-72e0-817d-15799ed44302', NULL, NULL, '08555555555', '019fb0db-3669-7118-ba35-06c7ac32fcbd', 1, '2026-07-29 19:30:34', '2026-07-29 19:30:34');
+(1, 3, '11', NULL, NULL, NULL, 'petugas 1', 'L', NULL, NULL, 6, NULL, NULL, NULL, 1, 1, '2026-08-08 04:20:53', '2026-08-08 04:20:53'),
+(2, 4, '22', NULL, NULL, NULL, 'imam ichsan arifin, S.Kom', 'L', NULL, NULL, 3, NULL, NULL, NULL, 1, 1, '2026-08-08 04:21:40', '2026-08-08 04:21:40'),
+(3, 5, '33', NULL, NULL, NULL, 'M. Bachtiar', 'L', NULL, NULL, 3, NULL, NULL, NULL, 1, 1, '2026-08-10 05:46:45', '2026-08-10 05:46:45');
 
 -- --------------------------------------------------------
 
@@ -252,10 +287,10 @@ INSERT INTO `teachers` (`id`, `user_id`, `nip`, `nik`, `nuptk`, `npy`, `full_nam
 --
 
 CREATE TABLE `users` (
-  `id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` bigint UNSIGNED NOT NULL,
   `email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `role` enum('super_admin','admin','guru','kepala_sekolah','waka','satpam','staff') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `role` enum('super_admin','admin','guru','kepala_sekolah','waka','satpam','staff','petugas') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'guru',
   `role_keterangan` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `is_hidden` tinyint(1) NOT NULL DEFAULT '0',
   `is_active` tinyint(1) NOT NULL DEFAULT '1',
@@ -270,9 +305,11 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `email`, `password`, `role`, `role_keterangan`, `is_hidden`, `is_active`, `email_verified_at`, `remember_token`, `created_at`, `updated_at`) VALUES
-('019fb0db-3537-7129-9c03-76853f51a745', 'superadmin@codepelita.sch.id', '$2y$12$LBQHdJcJ1W1roFMDOA107etMHApiMeoCDlBs/jzxUB3YTA1ZuCB6y', 'super_admin', 'Super Admin System', 1, 1, NULL, NULL, '2026-07-29 19:29:43', '2026-07-29 19:29:43'),
-('019fb0db-364c-70ef-ad63-e7b61f8fa24a', 'admin@codepelita.sch.id', '$2y$12$bjd7.xhfZ5q052RhRl/.RO.Kkyzhqcg/eI5Nv51lZRp/lmJsVxuJy', 'admin', 'Administrator Sekolah', 0, 1, NULL, NULL, '2026-07-29 19:29:44', '2026-07-29 19:29:44'),
-('019fb0db-fb87-700e-b3e7-34e189233211', 'guru@codepelita.sch.id', '$2y$12$fr0TA/jajtL3WoJSeP6.YegmSjCfdIEu.HnDBY.sP8wDw1ByGG7m2', 'guru', NULL, 0, 1, NULL, NULL, '2026-07-29 19:30:34', '2026-07-29 19:30:34');
+(1, 'superadmin@codepelita.sch.id', '$2y$12$TvfavIojthuO4I2xoqvqsuJjTrIB9w74zD2KYRk9Huo88/nQhFyjW', 'super_admin', 'Super Admin System', 1, 1, NULL, NULL, '2026-08-08 04:13:01', '2026-08-08 04:13:01'),
+(2, 'admin@codepelita.sch.id', '$2y$12$nmZwczoxDHyEsKJ5OsPruOr.zJ6f3NvGEV4PFKLymfy90mfUXgFuS', 'admin', 'Administrator Sekolah', 0, 1, NULL, NULL, '2026-08-08 04:13:01', '2026-08-08 04:13:01'),
+(3, 'petugas@codepelita.sch.id', '$2y$12$oXflE7DWTjM0GinwCagFiODNH9DcrOhb3A32tr1CwKoN7aDvM8B7a', 'petugas', NULL, 0, 1, NULL, NULL, '2026-08-08 04:20:53', '2026-08-08 04:20:53'),
+(4, 'imam@codepelita.sch.id', '$2y$12$5IoGH1CYx55BV93746UQ2ufAXOyh3kTggYaApZlpGYhdmzYVELuP.', 'guru', NULL, 0, 1, NULL, NULL, '2026-08-08 04:21:40', '2026-08-08 04:21:40'),
+(5, 'bachtiar@codepelita.sch.id', '$2y$12$HXgWpEAgFf/Q/d9VW.6W2OHiirsJP/f9O8mm3wx6hqNiXQYpLPsWy', 'guru', NULL, 0, 1, NULL, NULL, '2026-08-10 05:46:45', '2026-08-10 05:46:45');
 
 -- --------------------------------------------------------
 
@@ -281,7 +318,7 @@ INSERT INTO `users` (`id`, `email`, `password`, `role`, `role_keterangan`, `is_h
 --
 
 CREATE TABLE `work_schedules` (
-  `id` char(36) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` bigint UNSIGNED NOT NULL,
   `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `type` enum('fixed','shift') COLLATE utf8mb4_unicode_ci NOT NULL,
   `check_in_time` time NOT NULL,
@@ -297,21 +334,28 @@ CREATE TABLE `work_schedules` (
 --
 
 INSERT INTO `work_schedules` (`id`, `name`, `type`, `check_in_time`, `check_out_time`, `late_tolerance_minutes`, `is_active`, `created_at`, `updated_at`) VALUES
-('019fb0db-3669-7118-ba35-06c7ac32fcbd', 'Reguler (Guru & Staff)', 'fixed', '06:45:00', '14:00:00', 15, 1, '2026-07-29 19:29:44', '2026-07-29 19:29:44'),
-('019fb0db-366d-7056-8456-9e1db86034d1', 'Shift Pagi (Satpam)', 'shift', '06:00:00', '14:00:00', 10, 1, '2026-07-29 19:29:44', '2026-07-29 19:29:44'),
-('019fb0db-3670-710e-a17e-979189f8cf34', 'Shift Siang (Satpam)', 'shift', '14:00:00', '22:00:00', 10, 1, '2026-07-29 19:29:44', '2026-07-29 19:29:44'),
-('019fb0db-3671-7090-b42f-50e51e5de216', 'Shift Malam (Satpam)', 'shift', '22:00:00', '06:00:00', 10, 1, '2026-07-29 19:29:44', '2026-07-29 19:29:44');
+(1, 'Reguler (Guru & Staff)', 'fixed', '06:46:00', '11:30:00', 15, 1, '2026-08-08 04:13:02', '2026-08-10 05:48:03'),
+(2, 'Shift Pagi (Satpam)', 'shift', '06:00:00', '14:00:00', 10, 1, '2026-08-08 04:13:02', '2026-08-08 04:13:02'),
+(3, 'Shift Siang (Satpam)', 'shift', '14:00:00', '22:00:00', 10, 1, '2026-08-08 04:13:02', '2026-08-08 04:13:02'),
+(5, 'Shitt Malam (Satpam)', 'fixed', '22:00:00', '06:00:00', 0, 1, '2026-08-10 05:42:33', '2026-08-10 05:42:33');
 
 --
 -- Indexes for dumped tables
 --
 
 --
+-- Indexes for table `apel_attendances`
+--
+ALTER TABLE `apel_attendances`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `apel_attendances_teacher_id_date_unique` (`teacher_id`,`date`);
+
+--
 -- Indexes for table `attendance_records`
 --
 ALTER TABLE `attendance_records`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `attendance_records_teacher_id_shift_assignment_id_unique` (`teacher_id`,`shift_assignment_id`),
+  ADD UNIQUE KEY `att_teacher_shift_date_unique` (`teacher_id`,`shift_assignment_id`,`date`),
   ADD KEY `attendance_records_shift_assignment_id_foreign` (`shift_assignment_id`),
   ADD KEY `attendance_records_teacher_id_date_index` (`teacher_id`,`date`),
   ADD KEY `attendance_records_date_index` (`date`);
@@ -373,9 +417,8 @@ ALTER TABLE `sessions`
 --
 ALTER TABLE `shift_assignments`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `shift_assignments_teacher_id_foreign` (`teacher_id`),
-  ADD KEY `shift_assignments_work_schedule_id_foreign` (`work_schedule_id`),
-  ADD KEY `shift_assignments_date_index` (`date`);
+  ADD UNIQUE KEY `shift_assignments_teacher_id_unique` (`teacher_id`),
+  ADD KEY `shift_assignments_work_schedule_id_foreign` (`work_schedule_id`);
 
 --
 -- Indexes for table `teachers`
@@ -407,14 +450,86 @@ ALTER TABLE `work_schedules`
 --
 
 --
+-- AUTO_INCREMENT for table `apel_attendances`
+--
+ALTER TABLE `apel_attendances`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `attendance_records`
+--
+ALTER TABLE `attendance_records`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `audit_logs`
+--
+ALTER TABLE `audit_logs`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `geolocation_logs`
+--
+ALTER TABLE `geolocation_logs`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `migrations`
 --
 ALTER TABLE `migrations`
-  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+
+--
+-- AUTO_INCREMENT for table `positions`
+--
+ALTER TABLE `positions`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `qr_codes`
+--
+ALTER TABLE `qr_codes`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `school_settings`
+--
+ALTER TABLE `school_settings`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `shift_assignments`
+--
+ALTER TABLE `shift_assignments`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `teachers`
+--
+ALTER TABLE `teachers`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT for table `work_schedules`
+--
+ALTER TABLE `work_schedules`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- Constraints for dumped tables
 --
+
+--
+-- Constraints for table `apel_attendances`
+--
+ALTER TABLE `apel_attendances`
+  ADD CONSTRAINT `apel_attendances_teacher_id_foreign` FOREIGN KEY (`teacher_id`) REFERENCES `teachers` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `attendance_records`

@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('teachers', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('user_id')->constrained('users')->cascadeOnDelete();
+            $table->id();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->string('nip', 20)->nullable()->unique();
             $table->string('nik', 16)->nullable()->unique();
             $table->string('nuptk', 16)->nullable();
@@ -19,11 +19,11 @@ return new class extends Migration
             $table->enum('gender', ['L', 'P'])->nullable();
             $table->string('photo')->nullable();
             $table->string('department', 100)->nullable();
-            $table->foreignUuid('position_id')->nullable()->constrained('positions')->nullOnDelete();
-            $table->foreignUuid('waka_id')->nullable()->constrained('positions')->nullOnDelete();
+            $table->foreignId('position_id')->nullable()->constrained('positions')->nullOnDelete();
+            $table->foreignId('waka_id')->nullable()->constrained('positions')->nullOnDelete();
             $table->date('tmt')->nullable();
             $table->string('phone', 15)->nullable();
-            $table->foreignUuid('work_schedule_id')->nullable()->constrained('work_schedules')->nullOnDelete();
+            $table->foreignId('work_schedule_id')->nullable()->constrained('work_schedules')->nullOnDelete();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });

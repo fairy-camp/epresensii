@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>E-Presensi Mobile — Standalone Scanner</title>
+    <title>E-Presensi SMKSA</title>
 
     <!-- Google Font: Poppins -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -197,6 +197,18 @@
             </button>
         </form>
     </header>
+
+    <!-- Tombol Pengalih Mode Presensi (Harian vs Apel) -->
+    <div class="px-3 pt-2 bg-white border-bottom">
+        <div class="btn-group w-100 shadow-sm mb-2" role="group">
+            <a href="{{ route('attendance.scan') }}" class="btn btn-sm btn-primary active fw-bold py-1">
+                <i class="fas fa-clock me-1"></i> Presensi Harian
+            </a>
+            <a href="{{ route('apel.scan') }}" class="btn btn-sm btn-outline-warning text-dark fw-bold py-1">
+                <i class="fas fa-flag me-1"></i> Apel Pagi
+            </a>
+        </div>
+    </div>
 
     <!-- Content Area (Fit 1 Screen Height) -->
     <main class="app-body">

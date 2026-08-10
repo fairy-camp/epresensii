@@ -2,18 +2,23 @@
 
 @section('title', 'Penugasan Shift Guru')
 
+@push('styles')
+<!-- DataTables Bootstrap 5 CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+@endpush
+
 @section('content')
 <div class="container-fluid">
     <div class="row">
         <!-- Form Set Shift Permanen -->
-        <div class="col-md-4">
-            <div class="card card-info">
-                <div class="card-header"><h3 class="card-title">Set Shift Guru</h3></div>
+        <div class="col-md-4 mb-3">
+            <div class="card card-info shadow-sm">
+                <div class="card-header"><h3 class="card-title fw-bold">Set Shift Guru</h3></div>
                 <form action="{{ route('shift-assignments.storeBulk') }}" method="POST">
                     @csrf
                     <div class="card-body">
                         <div class="form-group mb-3">
-                            <label>Pilih Jadwal Kerja</label>
+                            <label class="fw-semibold">Pilih Jadwal Kerja</label>
                             <select name="work_schedule_id" class="form-control" required>
                                 <option value="">-- Pilih Shift --</option>
                                 @foreach($schedules as $s)
@@ -23,7 +28,7 @@
                         </div>
 
                         <div class="form-group mb-3">
-                            <label>Pilih Guru</label>
+                            <label class="fw-semibold">Pilih Guru</label>
                             <select name="teacher_ids[]" class="form-control" multiple style="height: 180px;" required>
                                 <option value="all" selected>-- SEMUA GURU AKTIF --</option>
                                 @foreach($teachers as $t)
@@ -34,7 +39,7 @@
                         </div>
                     </div>
                     <div class="card-footer">
-                        <button type="submit" class="btn btn-info w-100"><i class="fas fa-save me-1"></i> Simpan Shift Permanen</button>
+                        <button type="submit" class="btn btn-info w-100 fw-bold"><i class="fas fa-save me-1"></i> Simpan Shift Permanen</button>
                     </div>
                 </form>
             </div>
@@ -42,46 +47,76 @@
 
         <!-- Tabel Daftar Penugasan Shift -->
         <div class="col-md-8">
-            <div class="card">
+            <div class="card shadow-sm">
                 <div class="card-header">
-                    <h3 class="card-title">Daftar Penugasan Shift Guru (Permanen)</h3>
+                    <h3 class="card-title fw-bold">Daftar Penugasan Shift Guru (Permanen)</h3>
                 </div>
-                <div class="card-body p-0">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>NIP</th>
-                                <th>Nama Guru</th>
-                                <th>Jadwal Shift</th>
-                                <th style="width: 80px">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($assignments as $item)
-                            <tr>
-                                <td>{{ $item->teacher->nip ?? '-' }}</td>
-                                <td>{{ $item->teacher->full_name ?? '-' }}</td>
-                                <td>
-                                    <span class="badge bg-primary">
-                                        {{ $item->workSchedule->name ?? 'N/A' }} 
-                                        ({{ $item->workSchedule->check_in_time ?? '' }} - {{ $item->workSchedule->check_out_time ?? '' }})
-                                    </span>
-                                </td>
-                                <td>
-                                    <form action="{{ route('shift-assignments.destroy', $item->id) }}" method="POST" onsubmit="return confirm('Hapus penugasan shift guru ini?')">
-                                        @csrf @method('DELETE')
-                                        <button class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
-                                    </form>
-                                </td>
-                            </tr>
-                            @empty
-                            <tr><td colspan="4" class="text-center py-4 text-muted">Belum ada penugasan shift yang diatur. Silakan atur melalui form di samping.</td></tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                <div class="card-body p-3">
+                    <div class="table-responsive">
+                        <table id="shiftAssignmentsTable" class="table table-hover align-middle mb-0 w-100">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>NIP</th>
+                                    <th>Nama Guru</th>
+                                    <th>Jabatan & Role</th>
+                                    <th>Jadwal Shift</th>
+                                    <th class="text-center" style="width: 80px">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($assignments as $item)
+                                <tr>
+                                    <td><small class="fw-semibold text-muted">{{ $item->teacher->nip ?? '-' }}</small></td>
+                                    <td><strong>{{ $item->teacher->full_name ?? '-' }}</strong></td>
+                                    <td>
+                                        <span class="badge bg-info text-dark mb-1">
+                                            {{ $item->teacher->position->name ?? '-' }}
+                                        </span>
+                                        <br>
+                                        <small class="badge bg-secondary">
+                                            Role: {{ strtoupper(str_replace('_', ' ', $item->teacher->user->role ?? 'guru')) }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">
+                                            {{ $item->workSchedule->name ?? 'N/A' }} 
+                                            ({{ $item->workSchedule->check_in_time ?? '' }} - {{ $item->workSchedule->check_out_time ?? '' }})
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <form action="{{ route('shift-assignments.destroy', $item->id) }}" method="POST" onsubmit="return confirm('Hapus penugasan shift guru ini?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="btn btn-outline-danger btn-sm" title="Hapus Penugasan"><i class="fas fa-trash"></i></button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<!-- DataTables JS & Extension Bootstrap 5 -->
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        $('#shiftAssignmentsTable').DataTable({
+            "language": {
+                "url": "//cdn.datatables.net/plug-ins/1.13.7/i18n/id.json"
+            },
+            "order": [],
+            "pageLength": 10,
+            "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Semua"]]
+        });
+    });
+</script>
+@endpush

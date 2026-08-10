@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('qr_codes', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('teacher_id')->constrained('teachers')->cascadeOnDelete();
+            $table->id();
+            $table->foreignId('teacher_id')->constrained('teachers')->cascadeOnDelete();
             $table->string('code')->unique();
             $table->boolean('is_active')->default(true);
             $table->timestamps();

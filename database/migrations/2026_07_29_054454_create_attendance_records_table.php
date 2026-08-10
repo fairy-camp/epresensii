@@ -9,9 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('attendance_records', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('teacher_id')->constrained('teachers')->cascadeOnDelete();
-            $table->foreignUuid('shift_assignment_id')->constrained('shift_assignments')->cascadeOnDelete();
+            $table->id();
+            $table->foreignId('teacher_id')->constrained('teachers')->cascadeOnDelete();
+            $table->foreignId('shift_assignment_id')->constrained('shift_assignments')->cascadeOnDelete();
             $table->date('date')->index();
             $table->dateTime('check_in_time')->nullable();
             $table->dateTime('check_out_time')->nullable(); // DATETIME agar shift malam lintas hari akurat

@@ -3,26 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Models\AttendanceRecord;
+use App\Models\ApelAttendance;
 use App\Models\SchoolSetting;
 use App\Models\Teacher;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ReportController extends Controller
 {
     /**
-     * Menampilkan Halaman Filter & Matriks Laporan Presensi Bulanan
+     * Helper untuk menyusun data matriks bulanan & daftar guru
      */
-    public function index(Request $request)
+    private function prepareMonthlyData(Request $request)
     {
-        // Filter Bulan & Tahun (Default: Bulan dan Tahun saat ini)
         $month = (int) $request->input('month', Carbon::now()->month);
         $year  = (int) $request->input('year', Carbon::now()->year);
 
-        // Hitung jumlah hari dalam bulan terpilih (28, 29, 30, atau 31 hari)
         $daysInMonth = Carbon::createFromDate($year, $month, 1)->daysInMonth;
 
-        // Menyusun daftar tanggal 1 hingga akhir bulan serta penandaan hari Minggu
         $days = [];
         for ($d = 1; $d <= $daysInMonth; $d++) {
             $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $d);
@@ -34,62 +33,26 @@ class ReportController extends Controller
             ];
         }
 
-        // Ambil seluruh data guru aktif
         $teachers = Teacher::where('is_active', true)
+            ->whereHas('user', function ($query) {
+                $query->whereNotIn('role', ['admin', 'super_admin', 'petugas']);
+            })
             ->orderBy('full_name', 'asc')
             ->get();
 
-        // Ambil seluruh data presensi pada bulan & tahun terpilih
-        $attendanceRecords = AttendanceRecord::whereYear('date', $year)
-            ->whereMonth('date', $month)
-            ->get();
-
-        // Petakan data presensi ke dalam array matriks [teacher_id][nomor_hari]
-        $matrix = [];
-        foreach ($attendanceRecords as $record) {
-            $dayNum = (int) Carbon::parse($record->date)->format('j');
-            $matrix[$record->teacher_id][$dayNum] = $record;
-        }
-
-        return view('reports.attendance', compact(
-            'teachers',
-            'days',
-            'month',
-            'year',
-            'matrix'
-        ));
+        return compact('teachers', 'days', 'month', 'year');
     }
 
-    /**
-     * Mengarahkan ke tampilan cetak / cetak PDF
-     */
-    public function print(Request $request)
+    // ==========================================
+    // 1. LAPORAN PRESENSI UTAMA (HARIAN)
+    // ==========================================
+
+    public function index(Request $request)
     {
-        $school = SchoolSetting::first();
+        $data = $this->prepareMonthlyData($request);
 
-        // Menggunakan logika query matriks yang sama dengan index
-        $month = (int) $request->input('month', Carbon::now()->month);
-        $year  = (int) $request->input('year', Carbon::now()->year);
-
-        $daysInMonth = Carbon::createFromDate($year, $month, 1)->daysInMonth;
-
-        $days = [];
-        for ($d = 1; $d <= $daysInMonth; $d++) {
-            $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $d);
-            $carbonDate = Carbon::parse($dateStr);
-            $days[$d] = [
-                'day'       => $d,
-                'date'      => $dateStr,
-                'is_sunday' => $carbonDate->isSunday(),
-            ];
-        }
-
-        $teachers = Teacher::where('is_active', true)
-            ->orderBy('full_name', 'asc')
-            ->get();
-
-        $attendanceRecords = AttendanceRecord::whereYear('date', $year)
-            ->whereMonth('date', $month)
+        $attendanceRecords = AttendanceRecord::whereYear('date', $data['year'])
+            ->whereMonth('date', $data['month'])
             ->get();
 
         $matrix = [];
@@ -98,13 +61,79 @@ class ReportController extends Controller
             $matrix[$record->teacher_id][$dayNum] = $record;
         }
 
-        return view('reports.attendance', compact(
-            'teachers',
-            'days',
-            'month',
-            'year',
-            'matrix',
-            'school'
-        ));
+        return view('reports.attendance', array_merge($data, ['matrix' => $matrix]));
+    }
+
+    public function exportAttendancePdf(Request $request)
+    {
+        $data = $this->prepareMonthlyData($request);
+        $school = SchoolSetting::first();
+
+        $attendanceRecords = AttendanceRecord::whereYear('date', $data['year'])
+            ->whereMonth('date', $data['month'])
+            ->get();
+
+        $matrix = [];
+        foreach ($attendanceRecords as $record) {
+            $dayNum = (int) Carbon::parse($record->date)->format('j');
+            $matrix[$record->teacher_id][$dayNum] = $record;
+        }
+
+        $pdf = Pdf::loadView('reports.attendance_pdf', array_merge($data, [
+            'matrix' => $matrix,
+            'school' => $school
+        ]))
+        // Ukuran Kertas F4/Folio Landscape dalam Point: [0, 0, 612.00, 936.00]
+        ->setPaper([0, 0, 612.00, 936.00], 'landscape');
+
+        $monthName = Carbon::create()->month($data['month'])->translatedFormat('F');
+        return $pdf->download("Laporan_Presensi_Harian_{$monthName}_{$data['year']}.pdf");
+    }
+
+    // ==========================================
+    // 2. LAPORAN PRESENSI APEL PAGI
+    // ==========================================
+
+    public function apelIndex(Request $request)
+    {
+        $data = $this->prepareMonthlyData($request);
+
+        $apelRecords = ApelAttendance::whereYear('date', $data['year'])
+            ->whereMonth('date', $data['month'])
+            ->get();
+
+        $matrix = [];
+        foreach ($apelRecords as $record) {
+            $dayNum = (int) Carbon::parse($record->date)->format('j');
+            $matrix[$record->teacher_id][$dayNum] = $record;
+        }
+
+        return view('reports.apel', array_merge($data, ['matrix' => $matrix]));
+    }
+
+    public function exportApelPdf(Request $request)
+    {
+        $data = $this->prepareMonthlyData($request);
+        $school = SchoolSetting::first();
+
+        $apelRecords = ApelAttendance::whereYear('date', $data['year'])
+            ->whereMonth('date', $data['month'])
+            ->get();
+
+        $matrix = [];
+        foreach ($apelRecords as $record) {
+            $dayNum = (int) Carbon::parse($record->date)->format('j');
+            $matrix[$record->teacher_id][$dayNum] = $record;
+        }
+
+        $pdf = Pdf::loadView('reports.apel_pdf', array_merge($data, [
+            'matrix' => $matrix,
+            'school' => $school
+        ]))
+        // Ukuran Kertas F4/Folio Landscape
+        ->setPaper([0, 0, 612.00, 936.00], 'landscape');
+
+        $monthName = Carbon::create()->month($data['month'])->translatedFormat('F');
+        return $pdf->download("Laporan_Presensi_Apel_{$monthName}_{$data['year']}.pdf");
     }
 }

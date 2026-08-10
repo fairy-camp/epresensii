@@ -9,9 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('shift_assignments', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('teacher_id')->constrained('teachers')->cascadeOnDelete();
-            $table->foreignUuid('work_schedule_id')->constrained('work_schedules')->cascadeOnDelete();
+            $table->id();
+            $table->foreignId('teacher_id')->constrained('teachers')->cascadeOnDelete();
+            $table->foreignId('work_schedule_id')->constrained('work_schedules')->cascadeOnDelete();
             $table->date('date')->index();
             $table->timestamps();
         });

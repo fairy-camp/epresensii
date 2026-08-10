@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class SchoolSetting extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory;
 
     protected $fillable = [
         'school_name',

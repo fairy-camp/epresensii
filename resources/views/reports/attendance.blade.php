@@ -1,11 +1,11 @@
 @extends('layouts.main')
 
-@section('title', 'Laporan Rekap Presensi Matriks')
-@section('page-title', 'Laporan Rekapitulasi Presensi Matriks Bulanan')
+@section('title', 'Laporan Rekap Presensi Harian')
+@section('page-title', 'Laporan Rekapitulasi Presensi Harian Bulanan')
 
 @section('content')
 <!-- Card Filter -->
-<div class="card card-outline card-primary shadow-sm mb-4 print-none">
+<div class="card card-outline card-primary shadow-sm mb-4">
     <div class="card-header bg-white">
         <h5 class="card-title mb-0 font-weight-bold text-primary">
             <i class="fas fa-filter me-1"></i> Filter Laporan Bulanan
@@ -47,29 +47,26 @@
 
 <!-- Card Laporan Matriks -->
 <div class="card shadow-sm mb-4">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap print-none">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap">
         <h5 class="card-title mb-0 font-weight-bold text-dark">
-            <i class="fas fa-table me-1"></i> Matriks Presensi Periode {{ \Carbon\Carbon::create()->month($month)->translatedFormat('F') }} {{ $year }}
+            <i class="fas fa-table me-1"></i> Matriks Presensi Harian {{ \Carbon\Carbon::create()->month($month)->translatedFormat('F') }} {{ $year }}
         </h5>
-        <button onclick="window.print()" class="btn btn-danger">
-            <i class="fas fa-print me-1"></i> Cetak / Save PDF
-        </button>
+        <!-- Tombol Download PDF F4 -->
+        <a href="{{ route('reports.attendance.pdf', ['month' => $month, 'year' => $year]) }}" class="btn btn-danger">
+            <i class="fas fa-file-pdf me-1"></i> Download PDF (F4 Landscape)
+        </a>
     </div>
 
     <div class="card-body">
-        <!-- Legend Keterangan Status -->
         <div class="mb-3 p-3 bg-light border rounded">
-            <span class="fw-bold me-2">Keterangan Kode Presensi:</span>
-            <span class="badge bg-success me-1">H : Hadir (Tepat Waktu)</span>
-            <span class="badge bg-warning text-dark me-1">T : Terlambat</span>
-            <span class="badge bg-info text-dark me-1">TPP : Tidak Absen Pulang</span>
-            <span class="badge bg-danger me-1">TA : Tidak Absen</span>
-            <span class="badge bg-secondary me-1">- : Libur (Minggu)</span>
+            <span class="fw-bold me-2">Keterangan:</span>
+            <span class="badge bg-white text-dark border me-2">07:00 - 15:00 : Hadir Tepat Waktu</span>
+            <span class="badge bg-warning text-dark me-2">07:15 - 15:00 : Terlambat</span>
+            <span class="badge bg-secondary me-2">- : Libur (Minggu) / Tidak Hadir</span>
         </div>
 
-        <!-- Tabel Matriks -->
         <div class="table-responsive">
-            <table class="table table-bordered table-sm text-center align-middle mb-0" style="font-size: 11px;">
+            <table class="table table-bordered table-sm text-center align-middle mb-0" style="font-size: 10px;">
                 <thead class="table-dark">
                     <tr>
                         <th rowspan="2" class="align-middle" style="width: 35px;">NO</th>
@@ -79,7 +76,7 @@
                     </tr>
                     <tr>
                         @foreach($days as $dayInfo)
-                            <th class="{{ $dayInfo['is_sunday'] ? 'bg-secondary text-white' : '' }}" style="width: 22px;">
+                            <th class="{{ $dayInfo['is_sunday'] ? 'bg-secondary text-white' : '' }}" style="min-width: 80px;">
                                 {{ $dayInfo['day'] }}
                             </th>
                         @endforeach
@@ -95,48 +92,33 @@
                             @foreach($days as $d => $dayInfo)
                                 @php
                                     $rec = $matrix[$teacher->id][$d] ?? null;
-                                    $symbol = '';
+                                    $displayText = '';
                                     $cellClass = '';
 
                                     if ($dayInfo['is_sunday']) {
-                                        $symbol = '-';
+                                        $displayText = '-';
                                         $cellClass = 'bg-secondary text-white fw-bold';
                                     } else {
                                         $todayDate = \Carbon\Carbon::today()->toDateString();
-                                        
-                                        // Tanggal di masa mendatang
                                         if ($dayInfo['date'] > $todayDate) {
-                                            $symbol = '';
-                                        } 
-                                        // Tidak ada data presensi / tidak absen datang
-                                        elseif (!$rec || is_null($rec->check_in_time)) {
-                                            $symbol = 'TA';
-                                            $cellClass = 'text-danger fw-bold';
-                                        } 
-                                        // Absen datang ada, tapi lupa/tidak absen pulang
-                                        elseif (is_null($rec->check_out_time)) {
-                                            $symbol = 'TPP';
-                                            $cellClass = 'text-info fw-bold';
+                                            $displayText = '';
+                                        } elseif (!$rec || is_null($rec->check_in_time)) {
+                                            $displayText = '-';
+                                        } else {
+                                            $inTime = \Carbon\Carbon::parse($rec->check_in_time)->format('H:i');
+                                            $outTime = $rec->check_out_time ? \Carbon\Carbon::parse($rec->check_out_time)->format('H:i') : '-';
+                                            $displayText = "{$inTime} - {$outTime}";
                                             $totalPresensi++;
-                                        } 
-                                        // Datang terlambat
-                                        elseif ($rec->status === 'late') {
-                                            $symbol = 'T';
-                                            $cellClass = 'text-warning fw-bold';
-                                            $totalPresensi++;
-                                        } 
-                                        // Hadir Tepat Waktu
-                                        else {
-                                            $symbol = 'H';
-                                            $cellClass = 'text-success fw-bold';
-                                            $totalPresensi++;
+
+                                            if ($rec->status === 'late') {
+                                                $cellClass = 'bg-warning text-dark fw-bold';
+                                            }
                                         }
                                     }
                                 @endphp
-                                <td class="{{ $cellClass }}">{{ $symbol }}</td>
+                                <td class="{{ $cellClass }}" style="white-space: nowrap;">{{ $displayText }}</td>
                             @endforeach
                             
-                            <!-- Total Kedatangan -->
                             <td class="fw-bold bg-light text-primary">{{ $totalPresensi }}</td>
                         </tr>
                     @empty
@@ -151,40 +133,4 @@
         </div>
     </div>
 </div>
-
-<!-- CSS Spesifik Mode Cetak / Export PDF Browser -->
-<style>
-@media print {
-    body {
-        font-size: 9px;
-        background-color: #fff !important;
-    }
-    .print-none, sidebar, nav, header, footer, .main-sidebar, .main-header {
-        display: none !important;
-    }
-    .content-wrapper, .main-content {
-        margin-left: 0 !important;
-        padding: 0 !important;
-    }
-    .card {
-        border: none !important;
-        box-shadow: none !important;
-    }
-    .table-responsive {
-        overflow: visible !important;
-    }
-    .bg-secondary {
-        background-color: #6c757d !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-    .text-white {
-        color: #fff !important;
-    }
-    @page {
-        size: landscape;
-        margin: 8mm;
-    }
-}
-</style>
 @endsection
