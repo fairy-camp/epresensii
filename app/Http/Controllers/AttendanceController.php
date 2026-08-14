@@ -3,24 +3,34 @@
 namespace App\Http\Controllers;
 
 use App\Models\AttendanceRecord;
-use App\Models\ShiftAssignment;
 use App\Models\QrCode;
 use App\Models\SchoolSetting;
 use App\Models\Teacher;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
 
 class AttendanceController extends Controller
 {
     // Menampilkan Halaman Scanner QR Code
     public function scanPage()
     {
-        $school = SchoolSetting::first();
+        // Ambil dari cache
+        $school = Cache::remember('school_setting', 86400, function () {
+            return SchoolSetting::first();
+        });
+
+        // Proteksi: Jika cache rusak (__PHP_Incomplete_Class), reset cache dan ambil ulang dari DB
+        if ($school instanceof \__PHP_Incomplete_Class || !$school) {
+            Cache::forget('school_setting');
+            $school = SchoolSetting::first();
+        }
+
         return view('attendance.scan', compact('school'));
     }
 
-    // Pemrosesan API Presensi (AJAX POST)
+    // Pemrosesan API Presensi (AJAX POST) - DIOPTIMALKAN
+    // Pemrosesan API Presensi (AJAX POST) - SUDAH MENDUKUNG SHIFT MALAM
     public function processScan(Request $request)
     {
         $request->validate([
@@ -29,7 +39,15 @@ class AttendanceController extends Controller
             'longitude' => 'required|numeric',
         ]);
 
-        $school = SchoolSetting::first();
+        // 1. Ambil Pengaturan Sekolah dari Cache dengan Proteksi
+        $school = Cache::remember('school_setting', 86400, function () {
+            return SchoolSetting::first();
+        });
+
+        if ($school instanceof \__PHP_Incomplete_Class) {
+            Cache::forget('school_setting');
+            $school = SchoolSetting::first();
+        }
 
         if (!$school) {
             return response()->json([
@@ -38,7 +56,7 @@ class AttendanceController extends Controller
             ], 400);
         }
 
-        // 1. Validasi Radius / Geofencing (Rumus Haversine)
+        // 2. Validasi Geofencing / Radius
         $distance = $this->calculateDistance(
             $request->latitude,
             $request->longitude,
@@ -53,41 +71,30 @@ class AttendanceController extends Controller
             ], 422);
         }
 
-        // 2. Cek Validitas QR Code atau NIP Guru
-        $qr = QrCode::where('code', $request->qr_code)->where('is_active', true)->first();
-
-        if (!$qr) {
-            // Jika tidak ditemukan via Kode QR, coba cari via NIP Guru
-            $teacherByNip = Teacher::where('nip', $request->qr_code)->first();
-            if ($teacherByNip) {
-                $qr = QrCode::where('teacher_id', $teacherByNip->id)->where('is_active', true)->first();
-            }
-        }
-
-        if (!$qr) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Kode QR atau NIP tidak ditemukan / tidak aktif!'
-            ], 404);
-        }
-
-        $teacher = Teacher::find($qr->teacher_id);
-
-        if (!$teacher || !$teacher->is_active) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Data guru tidak ditemukan atau status akun tidak aktif.'
-            ], 404);
-        }
-
-        $today = Carbon::today()->toDateString();
-        $now = Carbon::now();
-        $currentTime = $now->format('H:i:s');
-
-        // 3. Cari Shift Assignment Permanen Guru
-        $shiftAssignment = ShiftAssignment::with('workSchedule')
-            ->where('teacher_id', $teacher->id)
+        // 3. Eager Loading Data QR, Guru, dan Shift
+        $qr = QrCode::with(['teacher.shiftAssignments.workSchedule'])
+            ->where('code', $request->qr_code)
+            ->where('is_active', true)
             ->first();
+
+        if (!$qr) {
+            $qr = QrCode::with(['teacher.shiftAssignments.workSchedule'])
+                ->whereHas('teacher', function ($q) use ($request) {
+                    $q->where('nip', $request->qr_code)->where('is_active', true);
+                })
+                ->where('is_active', true)
+                ->first();
+        }
+
+        if (!$qr || !$qr->teacher || !$qr->teacher->is_active) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Kode QR / NIP tidak ditemukan atau akun guru tidak aktif!'
+            ], 404);
+        }
+
+        $teacher = $qr->teacher;
+        $shiftAssignment = $teacher->shiftAssignments->first();
 
         if (!$shiftAssignment || !$shiftAssignment->workSchedule) {
             return response()->json([
@@ -97,50 +104,23 @@ class AttendanceController extends Controller
         }
 
         $schedule = $shiftAssignment->workSchedule;
+        $now = Carbon::now();
+        $currentTime = $now->format('H:i:s');
+        $today = $now->toDateString();
 
-        // 4. CEK DATA PRESENSI HARI INI (Strict Filter Tanggal Hari Ini)
-        $attendance = AttendanceRecord::where('teacher_id', $teacher->id)
+        // Cek apakah jadwal ini merupakan Shift Malam (Jam Masuk > Jam Keluar, misal 22:00 > 06:00)
+        $isOvernightShift = $schedule->check_in_time > $schedule->check_out_time;
+
+        // 4. CEK PRESENSI GANTUNG (Sudah Masuk tapi Belum Pulang)
+        $openAttendance = AttendanceRecord::where('teacher_id', $teacher->id)
             ->where('shift_assignment_id', $shiftAssignment->id)
-            ->whereDate('date', $today)
+            ->whereNull('check_out_time')
+            ->latest()
             ->first();
 
-        // =========================================================================
-        // SKENARIO A: BELUM PRESENSI MASUK HARI INI -> CATAT MASUK (CHECK-IN)
-        // =========================================================================
-        if (!$attendance) {
-            // Cek keterlambatan berdasarkan jam masuk di WorkSchedule
-            $status = ($currentTime > $schedule->check_in_time) ? 'late' : 'present';
-            $isLate = ($status === 'late');
-
-            $attendance = AttendanceRecord::create([
-                'teacher_id'          => $teacher->id,
-                'shift_assignment_id' => $shiftAssignment->id,
-                'work_schedule_id'    => $schedule->id,
-                'date'                => $today,
-                'check_in_time'       => $currentTime,
-                'status'              => $status,
-                'latitude'            => $request->latitude,
-                'longitude'           => $request->longitude,
-            ]);
-
-            $statusText = $isLate ? 'Terlambat' : 'Tepat Waktu';
-
-            return response()->json([
-                'status'   => 'success',
-                'type'     => 'masuk',
-                'is_late'  => $isLate,
-                'message'  => "Presensi MASUK Berhasil! ({$statusText})",
-                'teacher'  => $teacher->full_name,
-                'time'     => $currentTime,
-                'distance' => round($distance) . ' meter'
-            ]);
-        }
-
-        // =========================================================================
-        // SKENARIO B: SUDAH MASUK, TAPI BELUM PULANG -> CATAT PULANG (CHECK-OUT)
-        // =========================================================================
-        if (is_null($attendance->check_out_time)) {
-            $attendance->update([
+        // SKENARIO A: CHECK-OUT (PULANG)
+        if ($openAttendance) {
+            $openAttendance->update([
                 'check_out_time'      => $currentTime,
                 'check_out_latitude'  => $request->latitude,
                 'check_out_longitude' => $request->longitude,
@@ -156,23 +136,61 @@ class AttendanceController extends Controller
             ]);
         }
 
-        // =========================================================================
-        // SKENARIO C: SUDAH PRESENSI MASUK & PULANG HARI INI
-        // =========================================================================
+        // SKENARIO B: CHECK-IN (MASUK)
+        // Penentuan Tanggal Shift (Tgl Acuan Presensi)
+        // Jika Shift Malam dan di-scan setelah midnight (00:00 - 12:00), tanggal shift adalah HARI KEMARIN.
+        if ($isOvernightShift && $currentTime < '12:00:00') {
+            $attendanceDate = $now->copy()->subDay()->toDateString();
+        } else {
+            $attendanceDate = $today;
+        }
+
+        // Cek apakah sudah pernah presensi lengkap pada tanggal shift tersebut
+        $existingAttendance = AttendanceRecord::where('teacher_id', $teacher->id)
+            ->where('shift_assignment_id', $shiftAssignment->id)
+            ->whereDate('date', $attendanceDate)
+            ->first();
+
+        if ($existingAttendance && !is_null($existingAttendance->check_out_time)) {
+            return response()->json([
+                'status'  => 'warning',
+                'teacher' => $teacher->full_name,
+                'message' => 'Anda sudah melakukan presensi masuk dan pulang untuk shift ini.'
+            ], 200);
+        }
+
+        // Hitung Keterlambatan Menggunakan Objek Datetime Utuh
+        $scheduledCheckIn = Carbon::parse($attendanceDate . ' ' . $schedule->check_in_time);
+        $isLate = $now->greaterThan($scheduledCheckIn);
+        $status = $isLate ? 'late' : 'present';
+
+        AttendanceRecord::create([
+            'teacher_id'          => $teacher->id,
+            'shift_assignment_id' => $shiftAssignment->id,
+            'work_schedule_id'    => $schedule->id,
+            'date'                => $attendanceDate,
+            'check_in_time'       => $currentTime,
+            'status'              => $status,
+            'latitude'            => $request->latitude,
+            'longitude'           => $request->longitude,
+        ]);
+
+        $statusText = $isLate ? 'Terlambat' : 'Tepat Waktu';
+
         return response()->json([
-            'status'  => 'warning',
-            'teacher' => $teacher->full_name,
-            'message' => 'Anda sudah melakukan presensi masuk dan pulang untuk hari ini.'
-        ], 200);
+            'status'   => 'success',
+            'type'     => 'masuk',
+            'is_late'  => $isLate,
+            'message'  => "Presensi MASUK Berhasil! ({$statusText})",
+            'teacher'  => $teacher->full_name,
+            'time'     => $currentTime,
+            'distance' => round($distance) . ' meter'
+        ]);
     }
 
-    /**
-     * Menghitung jarak antara dua koordinat (dalam satuan meter)
-     * Menggunakan Rumus Haversine
-     */
     private function calculateDistance($lat1, $lon1, $lat2, $lon2)
     {
-        $earthRadius = 6371000; // Radius bumi dalam meter
+        $earthRadius = 6371000;
 
         $latFrom = deg2rad($lat1);
         $lonFrom = deg2rad($lon1);
@@ -188,25 +206,18 @@ class AttendanceController extends Controller
         return $angle * $earthRadius;
     }
 
-    /**
-     * Menampilkan Riwayat Presensi Pribadi milik Guru yang sedang Login
-     */
     public function myHistory(Request $request)
     {
         $user = auth()->user();
-
-        // Cari data guru berdasarkan user_id
         $teacher = Teacher::where('user_id', $user->id)->first();
 
         if (!$teacher) {
-            return redirect()->back()->with('error', 'Data profil guru tidak terhubung dengan akun Anda. Silakan hubungi Admin.');
+            return redirect()->back()->with('error', 'Data profil guru tidak terhubung dengan akun Anda.');
         }
 
-        // Filter Bulan & Tahun
         $month = $request->input('month', Carbon::now()->format('m'));
         $year  = $request->input('year', Carbon::now()->format('Y'));
 
-        // Ambil data presensi khusus guru tersebut
         $attendances = AttendanceRecord::with('shiftAssignment.workSchedule')
             ->where('teacher_id', $teacher->id)
             ->whereMonth('date', $month)
@@ -214,28 +225,20 @@ class AttendanceController extends Controller
             ->orderBy('date', 'desc')
             ->get();
 
-        // Hitung Ringkasan Statistik Kehadiran Guru
         $totalPresent = $attendances->where('status', 'present')->count();
         $totalLate    = $attendances->where('status', 'late')->count();
         $totalRecords = $attendances->count();
 
         return view('attendance.my_history', compact(
-            'teacher',
-            'attendances',
-            'month',
-            'year',
-            'totalPresent',
-            'totalLate',
-            'totalRecords'
+            'teacher', 'attendances', 'month', 'year', 'totalPresent', 'totalLate', 'totalRecords'
         ));
     }
 
-    // Menampilkan Semua Data Presensi + Filter Tanggal (Admin)
     public function index(Request $request)
     {
         $date = $request->input('date', Carbon::now()->format('Y-m-d'));
 
-        $attendances = AttendanceRecord::with('teacher')
+        $attendances = AttendanceRecord::with(['teacher', 'workSchedule'])
             ->whereDate('date', $date)
             ->latest('check_in_time')
             ->get();
@@ -243,7 +246,6 @@ class AttendanceController extends Controller
         return view('attendance.index', compact('attendances', 'date'));
     }
 
-    // Memperbarui Data Presensi (Via Modal Edit Admin)
     public function update(Request $request, $id)
     {
         if (!in_array(auth()->user()->role, ['super_admin', 'admin'])) {
@@ -269,7 +271,6 @@ class AttendanceController extends Controller
         return redirect()->back()->with('success', 'Data presensi berhasil diperbarui!');
     }
 
-    // Menghapus Data Presensi (Admin)
     public function destroy($id)
     {
         if (!in_array(auth()->user()->role, ['super_admin', 'admin'])) {

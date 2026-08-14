@@ -27,13 +27,13 @@
         image-rendering: crisp-edges;
     }
 
-    /* Position Overlay 1: Banner Nama & ID (Diturunkan tepat ke tengah pita hijau) */
+    /* Position Overlay 1: Banner Nama & ID */
     .identity-box-modal {
         position: absolute;
-        top: 36.6%;             /* Diturunkan dari 32.2% ke 34.5% */
+        top: 36.6%;
         left: 0;
         width: 100%;
-        height: 8%;             /* Disesuaikan tinggi kontainer */
+        height: 8%;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -57,19 +57,23 @@
     }
 
     .identity-box-modal .id-number {
-        font-size: 7pt;
+        font-size: 5.5pt;
         font-weight: 600;
-        line-height: 1;
+        line-height: 1.1;
         color: #ffffff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 95%;
     }
 
-    /* Position Overlay 2: Container QR Code (Diturunkan dan Diberi Margin dari Pita Hijau) */
+    /* Position Overlay 2: Container QR Code */
     .qr-container-modal {
         position: absolute;
-        top: 50%;             /* Diturunkan dari 43.8% ke 46.5% agar berjarak dari pita hijau */
+        top: 50%;
         left: 21%;
         width: 58%;
-        height: 38%;            /* Disesuaikan agar pas di dalam area putih */
+        height: 38%;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -89,6 +93,9 @@
         <h5 class="card-title mb-0 fw-bold"><i class="fas fa-chalkboard-teacher me-2 text-primary"></i>Daftar Guru / Pegawai</h5>
         <div class="card-tools">
             @if(in_array(auth()->user()->role, ['super_admin', 'admin']))
+            <button type="button" class="btn btn-success btn-sm me-1" data-bs-toggle="modal" data-bs-target="#importCsvModal">
+                <i class="fas fa-file-csv me-1"></i> Import CSV
+            </button>
             <button type="button" class="btn btn-primary btn-sm me-1" data-bs-toggle="modal" data-bs-target="#createTeacherModal">
                 <i class="fas fa-plus me-1"></i> Tambah Pegawai
             </button>
@@ -171,6 +178,7 @@
                                             data-bs-target="#modalCard" 
                                             data-id="{{ $teacher->id }}" 
                                             data-name="{{ $teacher->full_name }}" 
+                                            data-email="{{ $teacher->user->email ?? '-' }}"
                                             title="Download Kartu Presensi">
                                         <i class="fas fa-id-card"></i>
                                     </button>
@@ -203,6 +211,39 @@
 </div>
 
 <!-- ========================================== -->
+<!-- MODAL IMPORT CSV                          -->
+<!-- ========================================== -->
+@if(in_array(auth()->user()->role, ['super_admin', 'admin']))
+<div class="modal fade" id="importCsvModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success bg-opacity-10">
+                <h5 class="modal-title fw-bold text-dark"><i class="fas fa-file-csv me-2 text-success"></i>Import Data Pegawai dari CSV</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('teachers.import-csv') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div class="modal-body py-3">
+                    <div class="alert alert-info small mb-3">
+                        <i class="fas fa-info-circle me-1"></i> Format file harus berupa <strong>CSV (Comma Delimited) (*.csv)</strong> dengan susunan kolom:
+                        <br><code class="d-block mt-1 bg-white p-2 border rounded text-dark">nama_lengkap, email, password, role, nip, nik, jenis_kelamin, jabatan, jadwal_kerja, telepon</code>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Pilih File CSV <span class="text-danger">*</span></label>
+                        <input type="file" name="csv_file" class="form-control" accept=".csv, .txt" required>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success btn-sm fw-bold"><i class="fas fa-upload me-1"></i> Upload & Import Data</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
+
+<!-- ========================================== -->
 <!-- MODAL DOWNLOAD KARTU PRESENSI              -->
 <!-- ========================================== -->
 <div class="modal fade" id="modalCard" tabindex="-1" aria-labelledby="modalCardLabel" aria-hidden="true">
@@ -215,11 +256,10 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center bg-light py-4">
-                <!-- Frame Elemen Kartu Presensi -->
                 <div class="id-card-preview" id="modalCardElement">
                     <div class="identity-box-modal">
                         <div class="name" id="cardTeacherName">-</div>
-                        <div class="id-number" id="cardTeacherId">id : -</div>
+                        <div class="id-number" id="cardTeacherId">email : - | id : -</div>
                     </div>
                     <div class="qr-container-modal" id="cardQrContainer">
                         <!-- QR Code di-inject lewat JS -->
@@ -374,7 +414,7 @@
                     <div class="row mb-3">
                         <div class="col-md-4 mb-2">
                             <label class="form-label">Email <span class="text-danger">*</span></label>
-                            <input type="email" name="email" class="form-control" value="{{ old('email') }}" required placeholder="contoh: pegawai@codepelita.sch.id">
+                            <input type="email" name="email" class="form-control" value="{{ old('email') }}" required placeholder="contoh: pegawai@sekolah.sch.id">
                         </div>
                         <div class="col-md-4 mb-2">
                             <label class="form-label">Password <span class="text-danger">*</span></label>
@@ -483,12 +523,13 @@
         $(document).on('click', '.btn-card', function () {
             const id = $(this).data('id');
             const name = $(this).data('name');
+            const email = $(this).data('email');
             const qrSvg = $('#qr-svg-' + id).html();
 
             currentTeacherName = name;
 
             $('#cardTeacherName').text(name).attr('title', name);
-            $('#cardTeacherId').text('id : ' + id);
+            $('#cardTeacherId').text('email : ' + email + '  |  id : ' + id);
             $('#cardQrContainer').html(qrSvg);
         });
 
@@ -498,7 +539,7 @@
             const slugName = currentTeacherName.toLowerCase().replace(/[^a-z0-9]/g, '_');
 
             html2canvas(cardElement, {
-                scale: 4, // Multiplier 4x agar hasil tajam dan jernih
+                scale: 4,
                 useCORS: true,
                 backgroundColor: null,
                 logging: false

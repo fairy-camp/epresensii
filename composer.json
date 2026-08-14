@@ -10,6 +10,8 @@
         "barryvdh/laravel-dompdf": "*",
         "laravel/framework": "^13.8",
         "laravel/tinker": "^3.0",
+        "league/csv": "^9.28",
+        "maatwebsite/excel": "^1.1",
         "simplesoftwareio/simple-qrcode": "^4.2"
     },
     "require-dev": {

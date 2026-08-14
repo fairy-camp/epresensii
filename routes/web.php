@@ -72,8 +72,9 @@ Route::middleware('auth')->group(function () {
 
     // C. Akses Manajemen & Master Data (HANYA Super Admin & Admin)
     Route::middleware('role:super_admin,admin')->group(function () {
-        // Master Teachers CRUD
+        // Master Teachers CRUD & Import CSV
         Route::post('/teachers', [TeacherController::class, 'store'])->name('teachers.store');
+        Route::post('/teachers/import-csv', [TeacherController::class, 'importCsv'])->name('teachers.import-csv');
         Route::put('/teachers/{id}', [TeacherController::class, 'update'])->name('teachers.update');
         Route::delete('/teachers/{id}', [TeacherController::class, 'destroy'])->name('teachers.destroy');
 

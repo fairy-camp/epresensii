@@ -53,7 +53,7 @@
         </h5>
         <!-- Tombol Download PDF F4 -->
         <a href="{{ route('reports.attendance.pdf', ['month' => $month, 'year' => $year]) }}" class="btn btn-danger">
-            <i class="fas fa-file-pdf me-1"></i> Download PDF (F4 Landscape)
+            <i class="fas fa-file-pdf me-1"></i> Download Laporan Presensi
         </a>
     </div>
 

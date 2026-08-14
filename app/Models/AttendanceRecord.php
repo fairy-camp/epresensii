@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,17 +14,20 @@ class AttendanceRecord extends Model
     protected $fillable = [
         'teacher_id',
         'shift_assignment_id',
+        'work_schedule_id',        // DITAMBAHKAN
         'date',
         'check_in_time',
         'check_out_time',
         'status',
+        'latitude',                // DITAMBAHKAN
+        'longitude',               // DITAMBAHKAN
+        'check_out_latitude',      // DITAMBAHKAN
+        'check_out_longitude',     // DITAMBAHKAN
         'notes',
     ];
 
     protected $casts = [
         'date' => 'date',
-        'check_in_time' => 'datetime',
-        'check_out_time' => 'datetime',
     ];
 
     public function teacher(): BelongsTo
@@ -36,6 +38,11 @@ class AttendanceRecord extends Model
     public function shiftAssignment(): BelongsTo
     {
         return $this->belongsTo(ShiftAssignment::class, 'shift_assignment_id');
+    }
+
+    public function workSchedule(): BelongsTo
+    {
+        return $this->belongsTo(WorkSchedule::class, 'work_schedule_id');
     }
 
     public function geolocationLog(): HasOne

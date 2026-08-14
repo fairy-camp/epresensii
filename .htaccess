@@ -1,0 +1,13 @@
+# START MultiPHP Version
+<FilesMatch "\.(php4|php5|php3|php2|php|phtml)$">
+    SetHandler application/x-httpd-alt-php84___lsphp
+</FilesMatch>
+# END MultiPHP Version
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Mengarahkan semua request ke folder public
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>

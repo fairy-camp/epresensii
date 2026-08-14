@@ -306,7 +306,28 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // 1. Fungsi Text-to-Speech (Suara Bahasa Indonesia)
+        // 1. Fungsi Web Audio API Sintetis untuk Beep Instan (Tanpa Download File)
+        function playInstantBeep() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // Frekuensi 880 Hz (A5)
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); // Volume ringan
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.15); // Durasi 150 milidetik
+            } catch (e) {
+                // Berjalan silent jika browser memblokir audio otomatis
+            }
+        }
+
+        // 2. Fungsi Text-to-Speech (Suara Bahasa Indonesia)
         function speakText(text) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel(); // Hentikan ucapan aktif
@@ -318,7 +339,7 @@
             }
         }
 
-        // 2. Digital Realtime Clock
+        // 3. Digital Realtime Clock
         function updateClock() {
             const now = new Date();
             const hours = String(now.getHours()).padStart(2, '0');
@@ -333,7 +354,7 @@
         setInterval(updateClock, 1000);
         updateClock();
 
-        // 3. Logic Scanner & Geolocation
+        // 4. Logic Scanner & Geolocation
         document.addEventListener("DOMContentLoaded", function() {
             let currentLat = null;
             let currentLng = null;
@@ -410,7 +431,7 @@
                     if (!isNaN(lat) && !isNaN(lng)) {
                         currentLat = lat;
                         currentLng = lng;
-                        setGpsStatus("alert alert-warning py-1 px-2 mb-0 rounded-3 small flex-shrink-0 shadow-sm", `<i class="fas fa-map-marker-alt me-1"></i> GPS Manual (${lat.toFixed(5)}, ${lng.toFixed(5)})`);
+                        setGpsStatus("alert alert-warning py-1 px-2 mb-0 rounded-3 small flex-shrink-0 shadow-sm", `<i class="fas fa-map-marker-alt me-1"></i> GPS Manual (${lat.toFixed(5)}, ${lat.toFixed(5)})`);
                     }
                 });
             }
@@ -430,8 +451,8 @@
                 // Show Processing Popup
                 showPopup('bg-white border text-dark shadow-sm', '<i class="fas fa-spinner fa-spin fa-3x text-primary"></i>', 'Memproses Presensi...');
 
-                let beep = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-                beep.play().catch(() => {});
+                // Bunyikan Beep Instan (Web Audio API)
+                playInstantBeep();
 
                 fetch("{{ route('attendance.process') }}", {
                     method: "POST",

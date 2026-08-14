@@ -20,7 +20,7 @@ return new class extends Migration
             $table->timestamps();
 
             // Constraint agar 1 pegawai hanya punya 1 record per shift assignment
-            $table->unique(['teacher_id', 'shift_assignment_id']);
+            $table->unique(['teacher_id', 'shift_assignment_id', 'date']);
             $table->index(['teacher_id', 'date']);
         });
     }

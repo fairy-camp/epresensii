@@ -91,6 +91,139 @@ class TeacherController extends Controller
         }
     }
 
+    // Import Massal Data Guru dari CSV (Native fgetcsv)
+    public function importCsv(Request $request)
+    {
+        $request->validate([
+            'csv_file' => 'required|file|mimes:csv,txt|max:2048'
+        ], [
+            'csv_file.required' => 'Pilih file CSV terlebih dahulu!',
+            'csv_file.mimes'    => 'Format file harus berupa CSV (.csv).'
+        ]);
+
+        $file = $request->file('csv_file');
+        $filePath = $file->getRealPath();
+
+        // Deteksi Delimiter (Koma ',' atau Titik Koma ';')
+        $delimiter = ',';
+        $firstLine = file_get_contents($filePath, false, null, 0, 1000);
+        if (substr_count($firstLine, ';') > substr_count($firstLine, ',')) {
+            $delimiter = ';';
+        }
+
+        $handle = fopen($filePath, "r");
+
+        // Abaikan BOM (Byte Order Mark) jika ada pada file CSV dari Windows/Excel
+        fseek($handle, 0);
+        $bom = fread($handle, 3);
+        if ($bom !== "\xEF\xBB\xBF") {
+            fseek($handle, 0);
+        }
+
+        // Baca Header Baris Pertama
+        $header = fgetcsv($handle, 1000, $delimiter);
+
+        // Mapping Jabatan dan Jadwal Kerja ke Array (Case-Insensitive)
+        $positions = Position::pluck('id', 'name')->mapWithKeys(fn($id, $name) => [strtolower(trim($name)) => $id])->toArray();
+        $schedules = WorkSchedule::pluck('id', 'name')->mapWithKeys(fn($id, $name) => [strtolower(trim($name)) => $id])->toArray();
+
+        $firstPositionId = array_key_first($positions) ? reset($positions) : null;
+        $firstScheduleId = array_key_first($schedules) ? reset($schedules) : null;
+
+        $importedCount = 0;
+        $errors = [];
+        $rowNumber = 1;
+
+        DB::beginTransaction();
+        try {
+            while (($row = fgetcsv($handle, 1000, $delimiter)) !== FALSE) {
+                $rowNumber++;
+
+                // Abaikan baris kosong
+                if (array_filter($row) == null) continue;
+
+                // Pemetaan Kolom Berdasarkan Susunan CSV
+                $fullName = trim($row[0] ?? '');
+                $email    = trim($row[1] ?? '');
+                $password = !empty($row[2]) ? trim($row[2]) : '12345678';
+                $role     = !empty($row[3]) ? strtolower(trim($row[3])) : 'guru';
+                $nip      = !empty($row[4]) ? trim($row[4]) : null;
+                $nik      = !empty($row[5]) ? trim($row[5]) : null;
+                $gender   = strtoupper(trim($row[6] ?? 'L'));
+                $posName  = strtolower(trim($row[7] ?? ''));
+                $schedName= strtolower(trim($row[8] ?? ''));
+                $phone    = !empty($row[9]) ? trim($row[9]) : null;
+
+                // Validasi Kolom Wajib
+                if (empty($fullName) || empty($email)) {
+                    $errors[] = "Baris #{$rowNumber}: Nama Lengkap dan Email tidak boleh kosong.";
+                    continue;
+                }
+
+                // Cek Email Duplikat
+                if (User::where('email', $email)->exists()) {
+                    $errors[] = "Baris #{$rowNumber}: Email '{$email}' sudah terdaftar.";
+                    continue;
+                }
+
+                // Cari ID Position & Schedule
+                $posId   = $positions[$posName] ?? $firstPositionId;
+                $schedId = $schedules[$schedName] ?? $firstScheduleId;
+
+                // 1. Buat User Account
+                $user = User::create([
+                    'email'     => $email,
+                    'password'  => Hash::make($password),
+                    'role'      => in_array($role, ['guru', 'kepala_sekolah', 'waka', 'satpam', 'staff', 'petugas']) ? $role : 'guru',
+                    'is_active' => true,
+                ]);
+
+                // 2. Buat Data Teacher
+                $teacher = Teacher::create([
+                    'user_id'          => $user->id,
+                    'full_name'        => $fullName,
+                    'nip'              => $nip,
+                    'nik'              => $nik,
+                    'gender'           => in_array($gender, ['L', 'P']) ? $gender : 'L',
+                    'phone'            => $phone,
+                    'position_id'      => $posId,
+                    'work_schedule_id' => $schedId,
+                    'is_active'        => true,
+                ]);
+
+                // 3. Generate QR Code Otomatis
+                QrCode::create([
+                    'teacher_id' => $teacher->id,
+                    'code'       => 'QR-' . strtoupper(Str::random(10)) . '-' . time(),
+                    'is_active'  => true,
+                ]);
+
+                $importedCount++;
+            }
+
+            fclose($handle);
+
+            if ($importedCount === 0 && !empty($errors)) {
+                DB::rollBack();
+                return redirect()->back()->with('error', 'Gagal mengimpor data: <br>' . implode('<br>', array_slice($errors, 0, 5)));
+            }
+
+            DB::commit();
+
+            $message = "Berhasil mengimpor {$importedCount} data pegawai beserta QR Code!";
+            if (!empty($errors)) {
+                $message .= "<br>Beberapa baris dilewati karena duplikasi/data kosong: <br>" . implode('<br>', array_slice($errors, 0, 3));
+            }
+
+            return redirect()->route('teachers.index')->with('success', $message);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            if (isset($handle)) fclose($handle);
+            return redirect()->back()->with('error', 'Terjadi kesalahan sistem saat membaca file CSV: ' . $e->getMessage());
+        }
+    }
+
     // Memperbarui Data Guru (Via Modal Edit)
     public function update(Request $request, $id)
     {
@@ -185,28 +318,4 @@ class TeacherController extends Controller
             return back()->with('error', 'Gagal memperbarui QR Code: ' . $e->getMessage());
         }
     }
-
-    // Cetak ID Card Satuan
-    // public function printCard($id)
-    // {
-    //     $teacher = Teacher::with(['position', 'activeQrCode'])->findOrFail($id);
-
-    //     return view('teachers.print-card', [
-    //         'teachers' => collect([$teacher])
-    //     ]);
-    // }
-
-    // Cetak ID Card Massal
-    // public function printAllCards()
-    // {
-    //     $teachers = Teacher::with(['position', 'activeQrCode'])
-    //         ->where('is_active', true)
-    //         ->get();
-
-    //     if ($teachers->isEmpty()) {
-    //         return back()->with('error', 'Tidak ada data guru aktif untuk dicetak.');
-    //     }
-
-    //     return view('teachers.print-card', compact('teachers'));
-    // }
 }
