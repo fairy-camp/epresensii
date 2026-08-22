@@ -29,8 +29,7 @@ class AttendanceController extends Controller
         return view('attendance.scan', compact('school'));
     }
 
-    // Pemrosesan API Presensi (AJAX POST) - DIOPTIMALKAN
-    // Pemrosesan API Presensi (AJAX POST) - SUDAH MENDUKUNG SHIFT MALAM
+    // Pemrosesan API Presensi (AJAX POST)
     public function processScan(Request $request)
     {
         $request->validate([
@@ -99,7 +98,7 @@ class AttendanceController extends Controller
         if (!$shiftAssignment || !$shiftAssignment->workSchedule) {
             return response()->json([
                 'status'  => 'error',
-                'message' => "Guru {$teacher->full_name} belum memiliki jadwal shift!"
+                'message' => "{$teacher->full_name} belum memiliki jadwal shift!"
             ], 400);
         }
 
@@ -108,7 +107,7 @@ class AttendanceController extends Controller
         $currentTime = $now->format('H:i:s');
         $today = $now->toDateString();
 
-        // Cek apakah jadwal ini merupakan Shift Malam (Jam Masuk > Jam Keluar, misal 22:00 > 06:00)
+        // Cek apakah jadwal ini merupakan Shift Malam (Jam Masuk > Jam Keluar)
         $isOvernightShift = $schedule->check_in_time > $schedule->check_out_time;
 
         // 4. CEK PRESENSI GANTUNG (Sudah Masuk tapi Belum Pulang)
@@ -121,9 +120,7 @@ class AttendanceController extends Controller
         // SKENARIO A: CHECK-OUT (PULANG)
         if ($openAttendance) {
             $openAttendance->update([
-                'check_out_time'      => $currentTime,
-                'check_out_latitude'  => $request->latitude,
-                'check_out_longitude' => $request->longitude,
+                'check_out_time' => $now->toDateTimeString(), // Menggunakan format Datetime utuh
             ]);
 
             return response()->json([
@@ -137,8 +134,6 @@ class AttendanceController extends Controller
         }
 
         // SKENARIO B: CHECK-IN (MASUK)
-        // Penentuan Tanggal Shift (Tgl Acuan Presensi)
-        // Jika Shift Malam dan di-scan setelah midnight (00:00 - 12:00), tanggal shift adalah HARI KEMARIN.
         if ($isOvernightShift && $currentTime < '12:00:00') {
             $attendanceDate = $now->copy()->subDay()->toDateString();
         } else {
@@ -159,7 +154,7 @@ class AttendanceController extends Controller
             ], 200);
         }
 
-        // Hitung Keterlambatan Menggunakan Objek Datetime Utuh
+        // Hitung Keterlambatan
         $scheduledCheckIn = Carbon::parse($attendanceDate . ' ' . $schedule->check_in_time);
         $isLate = $now->greaterThan($scheduledCheckIn);
         $status = $isLate ? 'late' : 'present';
@@ -167,12 +162,9 @@ class AttendanceController extends Controller
         AttendanceRecord::create([
             'teacher_id'          => $teacher->id,
             'shift_assignment_id' => $shiftAssignment->id,
-            'work_schedule_id'    => $schedule->id,
             'date'                => $attendanceDate,
-            'check_in_time'       => $currentTime,
+            'check_in_time'       => $now->toDateTimeString(), // Menggunakan format Datetime utuh
             'status'              => $status,
-            'latitude'            => $request->latitude,
-            'longitude'           => $request->longitude,
         ]);
 
         $statusText = $isLate ? 'Terlambat' : 'Tepat Waktu';
@@ -238,7 +230,7 @@ class AttendanceController extends Controller
     {
         $date = $request->input('date', Carbon::now()->format('Y-m-d'));
 
-        $attendances = AttendanceRecord::with(['teacher', 'workSchedule'])
+        $attendances = AttendanceRecord::with(['teacher', 'shiftAssignment.workSchedule'])
             ->whereDate('date', $date)
             ->latest('check_in_time')
             ->get();

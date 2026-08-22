@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 class AttendanceRecord extends Model
 {
@@ -14,15 +15,14 @@ class AttendanceRecord extends Model
     protected $fillable = [
         'teacher_id',
         'shift_assignment_id',
-        'work_schedule_id',        // DITAMBAHKAN
         'date',
         'check_in_time',
         'check_out_time',
         'status',
-        'latitude',                // DITAMBAHKAN
-        'longitude',               // DITAMBAHKAN
-        'check_out_latitude',      // DITAMBAHKAN
-        'check_out_longitude',     // DITAMBAHKAN
+        'latitude',
+        'longitude',
+        'check_out_latitude',
+        'check_out_longitude',
         'notes',
     ];
 
@@ -40,9 +40,19 @@ class AttendanceRecord extends Model
         return $this->belongsTo(ShiftAssignment::class, 'shift_assignment_id');
     }
 
-    public function workSchedule(): BelongsTo
+    /**
+     * Relasi ke WorkSchedule secara tidak langsung via ShiftAssignment
+     */
+    public function workSchedule(): HasOneThrough
     {
-        return $this->belongsTo(WorkSchedule::class, 'work_schedule_id');
+        return $this->hasOneThrough(
+            WorkSchedule::class,
+            ShiftAssignment::class,
+            'id',                  // Key di shift_assignments (relasi ke attendance_records.shift_assignment_id)
+            'id',                  // Key di work_schedules (relasi ke shift_assignments.work_schedule_id)
+            'shift_assignment_id', // Local key di attendance_records
+            'work_schedule_id'     // Local key di shift_assignments
+        );
     }
 
     public function geolocationLog(): HasOne
