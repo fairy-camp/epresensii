@@ -13,10 +13,6 @@
         width: 58mm;
         height: 82mm;
         position: relative;
-        background-image: url("{{ asset('img/format-kartu.png') }}?v=3");
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
         border-radius: 4px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         overflow: hidden;
@@ -25,6 +21,17 @@
         /* Menjaga ketajaman rendering gambar di browser */
         image-rendering: -webkit-optimize-contrast;
         image-rendering: crisp-edges;
+    }
+
+    /* Tag <img> Background khusus agar ter-render HD oleh html2canvas */
+    .id-card-preview .card-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: 1;
     }
 
     /* Position Overlay 1: Banner Nama & ID */
@@ -42,6 +49,7 @@
         color: #ffffff;
         padding: 0 8px;
         box-sizing: border-box;
+        z-index: 2;
     }
 
     .identity-box-modal .name {
@@ -77,6 +85,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        z-index: 2;
     }
 
     .qr-container-modal svg, .qr-container-modal img {
@@ -257,6 +266,9 @@
             </div>
             <div class="modal-body text-center bg-light py-4">
                 <div class="id-card-preview" id="modalCardElement">
+                    <!-- Image Tag untuk background agar ter-render tajam oleh html2canvas -->
+                    <img src="{{ asset('img/format-kartu.png') }}?v=4" class="card-bg" alt="Kartu Background">
+                    
                     <div class="identity-box-modal">
                         <div class="name" id="cardTeacherName">-</div>
                         <div class="id-number" id="cardTeacherId">email : - | id : -</div>
@@ -539,10 +551,16 @@
             const slugName = currentTeacherName.toLowerCase().replace(/[^a-z0-9]/g, '_');
 
             html2canvas(cardElement, {
-                scale: 4,
+                scale: 4,               // Render 4x lipat resolusi tinggi
                 useCORS: true,
+                allowTaint: true,
                 backgroundColor: null,
-                logging: false
+                logging: false,
+                imageTimeout: 0,
+                onclone: (clonedDoc) => {
+                    const bg = clonedDoc.querySelector('.card-bg');
+                    if (bg) bg.style.display = 'block';
+                }
             }).then(canvas => {
                 const link = document.createElement('a');
                 link.download = 'Kartu_Presensi_' + slugName + '.png';
