@@ -75,7 +75,7 @@
     <div class="kop">
         <h2>{{ $school->school_name ?? 'SMK SYAFI\'I AKROM' }}</h2>
         <h3>LAPORAN REKAPITULASI PRESENSI APEL PAGI GURU DAN KARYAWAN</h3>
-        <p>Periode: {{ \Carbon\Carbon::create()->month($month)->translatedFormat('F') }} {{ $year }}</p>
+        <p>Periode: {{ \Carbon\Carbon::create()->month($month)->translatedFormat('F') }} {{ $year }} (Pelaksanaan Apel: Senin & Kamis)</p>
     </div>
 
     <table class="data-table">
@@ -107,6 +107,9 @@
                             if ($dayInfo['is_sunday']) {
                                 $displayText = '-';
                                 $cellClass = 'bg-sunday';
+                            } elseif (!$dayInfo['is_apel_day']) {
+                                $displayText = '-';
+                                $cellClass = '';
                             } else {
                                 $todayDate = \Carbon\Carbon::today()->toDateString();
                                 if ($dayInfo['date'] > $todayDate) {

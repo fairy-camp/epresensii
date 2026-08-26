@@ -61,10 +61,10 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
             <div class="p-2 bg-light border rounded flex-grow-1">
                 <span class="fw-bold me-2" style="font-size: 12px;">Keterangan:</span>
-                <span class="badge bg-success text-white me-1">Jam (cth: 06:50) : Tepat Waktu (<= 07:00)</span>
-                <span class="badge bg-warning text-dark me-1">Jam (cth: 07:10) : Terlambat (> 07:00)</span>
-                <span class="badge bg-danger text-white me-1">A : Alpa / Tidak Hadir</span>
-                <span class="badge bg-secondary me-1">- : Libur (Minggu)</span>
+                <span class="badge bg-success text-white me-1">Hadir</span>
+                <span class="badge bg-warning text-dark me-1">Terlambat</span>
+                <span class="badge bg-danger text-white me-1">Tidak Absen</span>
+                <span class="badge bg-secondary me-1">- : Minggu</span>
             </div>
 
             <!-- Input Pencarian Nama Guru / Karyawan -->
@@ -82,7 +82,7 @@
                     <tr>
                         <th rowspan="2" class="align-middle" style="width: 35px;">NO</th>
                         <th rowspan="2" class="align-middle text-start" style="min-width: 170px;">NAMA GURU / KARYAWAN</th>
-                        <th colspan="{{ count($days) }}" class="align-middle">TANGGAL APEL PAGI</th>
+                        <th colspan="{{ count($days) }}" class="align-middle">TANGGAL APEL PAGI (SENIN & KAMIS)</th>
                         <th rowspan="2" class="align-middle" style="width: 65px;">TOTAL APEL</th>
                     </tr>
                     <tr>
@@ -109,6 +109,9 @@
                                     if ($dayInfo['is_sunday']) {
                                         $displayText = '-';
                                         $cellClass = 'bg-secondary text-white fw-bold';
+                                    } elseif (!$dayInfo['is_apel_day']) {
+                                        $displayText = '-';
+                                        $cellClass = 'text-muted';
                                     } else {
                                         $todayDate = \Carbon\Carbon::today()->toDateString();
                                         if ($dayInfo['date'] > $todayDate) {

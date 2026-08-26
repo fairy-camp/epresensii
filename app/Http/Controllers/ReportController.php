@@ -27,9 +27,10 @@ class ReportController extends Controller
             $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $d);
             $carbonDate = Carbon::parse($dateStr);
             $days[$d] = [
-                'day'       => $d,
-                'date'      => $dateStr,
-                'is_sunday' => $carbonDate->isSunday(),
+                'day'         => $d,
+                'date'        => $dateStr,
+                'is_sunday'   => $carbonDate->isSunday(),
+                'is_apel_day' => $carbonDate->isMonday() || $carbonDate->isThursday(),
             ];
         }
 
@@ -83,7 +84,6 @@ class ReportController extends Controller
             'matrix' => $matrix,
             'school' => $school
         ]))
-        // Ukuran Kertas F4/Folio Landscape dalam Point: [0, 0, 612.00, 936.00]
         ->setPaper([0, 0, 612.00, 936.00], 'landscape');
 
         $monthName = Carbon::create()->month($data['month'])->translatedFormat('F');
@@ -130,7 +130,6 @@ class ReportController extends Controller
             'matrix' => $matrix,
             'school' => $school
         ]))
-        // Ukuran Kertas F4/Folio Landscape
         ->setPaper([0, 0, 612.00, 936.00], 'landscape');
 
         $monthName = Carbon::create()->month($data['month'])->translatedFormat('F');
