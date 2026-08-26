@@ -15,26 +15,36 @@ class WorkScheduleController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'name'           => 'required|string|max:255',
-            'check_in_time'  => 'required|date_format:H:i',
-            'check_out_time' => 'required|date_format:H:i',
+        $validated = $request->validate([
+            'name'                 => 'required|string|max:255',
+            'type'                 => 'required|in:fixed,shift',
+            'start_check_in_time'  => 'required|date_format:H:i',
+            'check_in_time'        => 'required|date_format:H:i',
+            'end_check_in_time'    => 'required|date_format:H:i',
+            'start_check_out_time' => 'required|date_format:H:i',
+            'check_out_time'       => 'required|date_format:H:i',
+            'end_check_out_time'   => 'required|date_format:H:i',
         ]);
 
-        WorkSchedule::create($request->only(['name', 'check_in_time', 'check_out_time']));
+        WorkSchedule::create($validated);
 
         return redirect()->back()->with('success', 'Jadwal kerja berhasil ditambahkan.');
     }
 
     public function update(Request $request, WorkSchedule $workSchedule)
     {
-        $request->validate([
-            'name'           => 'required|string|max:255',
-            'check_in_time'  => 'required|date_format:H:i',
-            'check_out_time' => 'required|date_format:H:i',
+        $validated = $request->validate([
+            'name'                 => 'required|string|max:255',
+            'type'                 => 'required|in:fixed,shift',
+            'start_check_in_time'  => 'required|date_format:H:i',
+            'check_in_time'        => 'required|date_format:H:i',
+            'end_check_in_time'    => 'required|date_format:H:i',
+            'start_check_out_time' => 'required|date_format:H:i',
+            'check_out_time'       => 'required|date_format:H:i',
+            'end_check_out_time'   => 'required|date_format:H:i',
         ]);
 
-        $workSchedule->update($request->only(['name', 'check_in_time', 'check_out_time']));
+        $workSchedule->update($validated);
 
         return redirect()->back()->with('success', 'Jadwal kerja berhasil diperbarui.');
     }

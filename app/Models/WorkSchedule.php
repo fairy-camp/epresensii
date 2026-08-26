@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -15,7 +14,11 @@ class WorkSchedule extends Model
         'name',
         'type',
         'check_in_time',
+        'start_check_in_time',
+        'end_check_in_time',
         'check_out_time',
+        'start_check_out_time',
+        'end_check_out_time',
         'late_tolerance_minutes',
         'is_active',
     ];

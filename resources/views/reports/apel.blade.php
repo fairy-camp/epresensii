@@ -47,7 +47,7 @@
 
 <!-- Card Laporan Matriks Apel -->
 <div class="card shadow-sm mb-4">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h5 class="card-title mb-0 font-weight-bold text-dark">
             <i class="fas fa-flag me-1 text-warning"></i> Matriks Presensi Apel Pagi {{ \Carbon\Carbon::create()->month($month)->translatedFormat('F') }} {{ $year }}
         </h5>
@@ -58,16 +58,26 @@
     </div>
 
     <div class="card-body">
-        <div class="mb-3 p-3 bg-light border rounded">
-            <span class="fw-bold me-2">Keterangan:</span>
-            <span class="badge bg-success text-white me-2">Jam (cth: 06:50) : Tepat Waktu (<= 07:00)</span>
-            <span class="badge bg-warning text-dark me-2">Jam (cth: 07:10) : Terlambat (> 07:00)</span>
-            <span class="badge bg-danger text-white me-2">A : Alpa / Tidak Hadir</span>
-            <span class="badge bg-secondary me-2">- : Libur (Minggu)</span>
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <div class="p-2 bg-light border rounded flex-grow-1">
+                <span class="fw-bold me-2" style="font-size: 12px;">Keterangan:</span>
+                <span class="badge bg-success text-white me-1">Jam (cth: 06:50) : Tepat Waktu (<= 07:00)</span>
+                <span class="badge bg-warning text-dark me-1">Jam (cth: 07:10) : Terlambat (> 07:00)</span>
+                <span class="badge bg-danger text-white me-1">A : Alpa / Tidak Hadir</span>
+                <span class="badge bg-secondary me-1">- : Libur (Minggu)</span>
+            </div>
+
+            <!-- Input Pencarian Nama Guru / Karyawan -->
+            <div style="min-width: 260px;">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" id="searchTeacherName" class="form-control border-start-0 ps-0" placeholder="Cari nama guru / pegawai..." autocomplete="off">
+                </div>
+            </div>
         </div>
 
         <div class="table-responsive">
-            <table class="table table-bordered table-sm text-center align-middle mb-0" style="font-size: 10px;">
+            <table class="table table-bordered table-sm text-center align-middle mb-0" id="apelMatrixTable" style="font-size: 10px;">
                 <thead class="table-dark">
                     <tr>
                         <th rowspan="2" class="align-middle" style="width: 35px;">NO</th>
@@ -88,7 +98,7 @@
                         @php $totalApel = 0; @endphp
                         <tr>
                             <td>{{ $index + 1 }}</td>
-                            <td class="text-start fw-bold">{{ $teacher->full_name }}</td>
+                            <td class="text-start fw-bold teacher-name">{{ $teacher->full_name }}</td>
                             
                             @foreach($days as $d => $dayInfo)
                                 @php
@@ -129,7 +139,7 @@
                             <td class="fw-bold bg-light text-warning text-dark">{{ $totalApel }}</td>
                         </tr>
                     @empty
-                        <tr>
+                        <tr id="emptyRow">
                             <td colspan="{{ count($days) + 3 }}" class="text-center py-4 text-muted">
                                 Tidak ada data guru aktif ditemukan.
                             </td>
@@ -140,4 +150,31 @@
         </div>
     </div>
 </div>
+
+<!-- Script Filter Pencarian Nama Guru secara Real-time -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchTeacherName');
+    const table = document.getElementById('apelMatrixTable');
+
+    if (searchInput && table) {
+        searchInput.addEventListener('keyup', function() {
+            const keyword = this.value.toLowerCase().trim();
+            const rows = table.querySelectorAll('tbody tr:not(#emptyRow)');
+
+            rows.forEach(row => {
+                const nameCell = row.querySelector('.teacher-name');
+                if (nameCell) {
+                    const teacherName = nameCell.textContent.toLowerCase();
+                    if (teacherName.includes(keyword)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                }
+            });
+        });
+    }
+});
+</script>
 @endsection

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\ApelAttendance;
 use App\Models\Teacher;
+use App\Models\QrCode; // <--- Pastikan Model QrCode Di-import
 use App\Models\SchoolSetting;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -39,17 +40,43 @@ class ApelAttendanceController extends Controller
             $today = Carbon::today()->toDateString();
             $now = Carbon::now();
 
-            // 1. Pencarian Guru
-            $teacher = Teacher::where('nip', $code)->first();
+            // Dekode jika isi QR Code berupa format JSON
+            if (str_starts_with($code, '{') && str_ends_with($code, '}')) {
+                $json = json_decode($code, true);
+                if (is_array($json)) {
+                    $code = $json['code'] ?? $json['nip'] ?? $json['nik'] ?? $json['nuptk'] ?? $json['npy'] ?? $json['id'] ?? $code;
+                }
+            }
 
-            if (!$teacher) {
+            // 1. Pencarian Guru (Mendukung Tabel QrCode DAN Tabel Teachers)
+            $teacher = null;
+
+            // A. Cari dari tabel qr_codes terlebih dahulu (Sama dengan Presensi Utama)
+            $qr = QrCode::with('teacher')
+                ->where('code', $code)
+                ->where('is_active', true)
+                ->first();
+
+            if ($qr && $qr->teacher) {
+                $teacher = $qr->teacher;
+            } else {
+                // B. Jika bukan Kode QR, cari langsung berdasarkan NIP/NIK/NUPTK/NPY di tabel teachers
+                $teacher = Teacher::where('nip', $code)
+                    ->orWhere('nik', $code)
+                    ->orWhere('nuptk', $code)
+                    ->orWhere('npy', $code)
+                    ->orWhere('id', $code)
+                    ->first();
+            }
+
+            if (!$teacher || !$teacher->is_active) {
                 return response()->json([
                     'status'  => 'error',
-                    'message' => 'NIP / Kartu tidak terdaftar dalam sistem!'
+                    'message' => 'NIP / Kartu QR tidak terdaftar dalam sistem!'
                 ], 404);
             }
 
-            $teacherName = $teacher->name ?? $teacher->full_name ?? 'Guru / Pegawai';
+            $teacherName = $teacher->full_name ?? 'Guru / Pegawai';
 
             // 2. Cek Geofence / Radius Sekolah Menggunakan school_settings
             $school = SchoolSetting::first();
@@ -86,12 +113,12 @@ class ApelAttendanceController extends Controller
                 ], 200);
             }
 
-            // 4. Penentuan Status Apel
+            // 4. Penentuan Status Apel (Batas Waktu Jam 07:00)
             $apelDeadline = Carbon::createFromTimeString('07:00:00');
             $isLate = $now->gt($apelDeadline);
             $status = $isLate ? 'late' : 'present';
 
-            // 5. Simpan Record Presensi Apel (Tanpa simpan latitude & longitude)
+            // 5. Simpan Record Presensi Apel
             DB::beginTransaction();
 
             ApelAttendance::create([
@@ -134,19 +161,17 @@ class ApelAttendanceController extends Controller
     {
         $date = $request->input('date', Carbon::today()->toDateString());
 
-        // Ambil data presensi apel sesuai tanggal terpilih untuk DataTables
         $attendances = ApelAttendance::with('teacher')
             ->whereDate('created_at', $date)
             ->latest()
             ->get();
 
-        // Hitung statistik terpisah
-    $tepatWaktu = $attendances->where('status', 'present')->count();
-    $terlambat  = $attendances->where('status', 'late')->count();
-    $totalHadir = $tepatWaktu + $terlambat; // Hanya menghitung hadir (present + late)
-    $totalAlpa  = $attendances->where('status', 'absent')->count();
+        $tepatWaktu = $attendances->where('status', 'present')->count();
+        $terlambat  = $attendances->where('status', 'late')->count();
+        $totalHadir = $tepatWaktu + $terlambat; 
+        $totalAlpa  = $attendances->where('status', 'absent')->count();
 
-    return view('apel.index', compact('attendances', 'date', 'totalHadir', 'tepatWaktu', 'terlambat', 'totalAlpa'));
+        return view('apel.index', compact('attendances', 'date', 'totalHadir', 'tepatWaktu', 'terlambat', 'totalAlpa'));
     }
 
     /**
@@ -166,11 +191,10 @@ class ApelAttendanceController extends Controller
 
     /**
      * Helper Function: Menghitung Jarak Antara Dua Koordinat GPS (Haversine Formula)
-     * Output dalam satuan Meter
      */
     private function calculateDistance($lat1, $lon1, $lat2, $lon2)
     {
-        $earthRadius = 6371000; // Radius Bumi dalam meter
+        $earthRadius = 6371000;
 
         $dLat = deg2rad($lat2 - $lat1);
         $dLon = deg2rad($lon2 - $lon1);

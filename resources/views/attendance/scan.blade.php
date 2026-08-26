@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>E-Presensi SMKSA</title>
 
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ asset('img/logo.png') }}?v=1">
+    <link rel="shortcut icon" type="image/png" href="{{ asset('img/logo.png') }}?v=1">
+
     <!-- Google Font: Poppins -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Font Awesome 6 -->
@@ -161,6 +165,10 @@
             padding: 20px;
         }
 
+        header a {
+            text-decoration: none;
+        }
+
         .scan-popup-card {
             width: 100%;
             max-width: 320px;
@@ -181,15 +189,18 @@
 
     <!-- Header Mobile App (Light Mode) -->
     <header class="mobile-header d-flex align-items-center justify-content-between shadow-sm">
-        <div class="d-flex align-items-center gap-2">
-            <div class="header-logo-box d-flex align-items-center justify-content-center">
-                <img src="{{ asset('img/logo.png') }}" alt="Logo Sekolah" style="width: 100%; height: 100%; object-fit: contain;">
+        <a href="{{ route('attendance.scan') }}">
+            <div class="d-flex align-items-center gap-2">
+                <div class="header-logo-box d-flex align-items-center justify-content-center">
+                    <img src="{{ asset('img/logo.png') }}" alt="Logo Sekolah" style="width: 100%; height: 100%; object-fit: contain;">
+                </div>
+                <div class="d-flex flex-column justify-content-center">
+                    <h6 class="mb-0 fw-bold text-dark fs-6 lh-1">E-Presensi</h6>
+                    <small class="text-secondary" style="font-size: 11px; margin-top: 2px;">SMK Syafi'i Akrom</small>
+                </div>
             </div>
-            <div class="d-flex flex-column justify-content-center">
-                <h6 class="mb-0 fw-bold text-dark fs-6 lh-1">E-Presensi</h6>
-                <small class="text-secondary" style="font-size: 11px; margin-top: 2px;">SMK Syafi'i Akrom</small>
-            </div>
-        </div>
+        </a>
+        
         <form action="{{ route('logout') }}" method="POST" class="m-0">
             @csrf
             <button type="submit" class="btn btn-sm btn-outline-danger border-0 rounded-circle p-0 d-flex align-items-center justify-content-center" title="Logout" style="width: 32px; height: 32px;">

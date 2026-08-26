@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ApelAttendance;
 use App\Models\AttendanceRecord;
 use App\Models\QrCode;
 use App\Models\SchoolSetting;
@@ -12,15 +13,12 @@ use Illuminate\Support\Facades\Cache;
 
 class AttendanceController extends Controller
 {
-    // Menampilkan Halaman Scanner QR Code
     public function scanPage()
     {
-        // Ambil dari cache
         $school = Cache::remember('school_setting', 86400, function () {
             return SchoolSetting::first();
         });
 
-        // Proteksi: Jika cache rusak (__PHP_Incomplete_Class), reset cache dan ambil ulang dari DB
         if ($school instanceof \__PHP_Incomplete_Class || !$school) {
             Cache::forget('school_setting');
             $school = SchoolSetting::first();
@@ -29,7 +27,6 @@ class AttendanceController extends Controller
         return view('attendance.scan', compact('school'));
     }
 
-    // Pemrosesan API Presensi (AJAX POST)
     public function processScan(Request $request)
     {
         $request->validate([
@@ -38,7 +35,6 @@ class AttendanceController extends Controller
             'longitude' => 'required|numeric',
         ]);
 
-        // 1. Ambil Pengaturan Sekolah dari Cache dengan Proteksi
         $school = Cache::remember('school_setting', 86400, function () {
             return SchoolSetting::first();
         });
@@ -55,7 +51,7 @@ class AttendanceController extends Controller
             ], 400);
         }
 
-        // 2. Validasi Geofencing / Radius
+        // 1. Validasi Radius GPS
         $distance = $this->calculateDistance(
             $request->latitude,
             $request->longitude,
@@ -70,7 +66,7 @@ class AttendanceController extends Controller
             ], 422);
         }
 
-        // 3. Eager Loading Data QR, Guru, dan Shift
+        // 2. Validasi NIP / QR Code
         $qr = QrCode::with(['teacher.shiftAssignments.workSchedule'])
             ->where('code', $request->qr_code)
             ->where('is_active', true)
@@ -107,20 +103,41 @@ class AttendanceController extends Controller
         $currentTime = $now->format('H:i:s');
         $today = $now->toDateString();
 
-        // Cek apakah jadwal ini merupakan Shift Malam (Jam Masuk > Jam Keluar)
-        $isOvernightShift = $schedule->check_in_time > $schedule->check_out_time;
+        // Mengambil batas waktu dari jadwal kerja (atau memakai nilai default)
+        $startCheckIn  = $schedule->start_check_in_time  ?? '06:30:00';
+        $endCheckIn    = $schedule->end_check_in_time    ?? '07:00:00';
+        $startCheckOut = $schedule->start_check_out_time ?? '15:00:00';
+        $endCheckOut   = $schedule->end_check_out_time   ?? '17:00:00';
 
-        // 4. CEK PRESENSI GANTUNG (Sudah Masuk tapi Belum Pulang)
+        // 3. Cek Status Presensi Terbuka (Sudah Absen Masuk, Belum Absen Pulang)
         $openAttendance = AttendanceRecord::where('teacher_id', $teacher->id)
             ->where('shift_assignment_id', $shiftAssignment->id)
             ->whereNull('check_out_time')
             ->latest()
             ->first();
 
-        // SKENARIO A: CHECK-OUT (PULANG)
         if ($openAttendance) {
+            // User scan ulang saat jam presensi pulang belum dibuka
+            if ($currentTime < $startCheckOut) {
+                $checkInFormatted = Carbon::parse($openAttendance->check_in_time)->format('H:i');
+                return response()->json([
+                    'status'  => 'warning',
+                    'teacher' => $teacher->full_name,
+                    'message' => "Anda sudah melakukan presensi masuk hari ini pada jam {$checkInFormatted}. Presensi pulang baru dibuka jam " . substr($startCheckOut, 0, 5) . '.'
+                ], 200);
+            }
+
+            // User scan saat batas jam pulang sudah lewati
+            if ($currentTime > $endCheckOut) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Waktu presensi pulang telah berakhir (Batas maksimal jam ' . substr($endCheckOut, 0, 5) . ').'
+                ], 422);
+            }
+
+            // Proses Presensi Pulang
             $openAttendance->update([
-                'check_out_time' => $now->toDateTimeString(), // Menggunakan format Datetime utuh
+                'check_out_time' => $now->toDateTimeString(),
             ]);
 
             return response()->json([
@@ -133,37 +150,45 @@ class AttendanceController extends Controller
             ]);
         }
 
-        // SKENARIO B: CHECK-IN (MASUK)
-        if ($isOvernightShift && $currentTime < '12:00:00') {
-            $attendanceDate = $now->copy()->subDay()->toDateString();
-        } else {
-            $attendanceDate = $today;
-        }
-
-        // Cek apakah sudah pernah presensi lengkap pada tanggal shift tersebut
+        // 4. Cek Jika Sudah Pernah Selesai Presensi Lengkap (Masuk & Pulang)
         $existingAttendance = AttendanceRecord::where('teacher_id', $teacher->id)
             ->where('shift_assignment_id', $shiftAssignment->id)
-            ->whereDate('date', $attendanceDate)
+            ->whereDate('date', $today)
             ->first();
 
         if ($existingAttendance && !is_null($existingAttendance->check_out_time)) {
             return response()->json([
                 'status'  => 'warning',
                 'teacher' => $teacher->full_name,
-                'message' => 'Anda sudah melakukan presensi masuk dan pulang untuk shift ini.'
+                'message' => 'Anda sudah melakukan presensi masuk dan pulang untuk hari ini.'
             ], 200);
         }
 
-        // Hitung Keterlambatan
-        $scheduledCheckIn = Carbon::parse($attendanceDate . ' ' . $schedule->check_in_time);
+        // 5. Cek Pembatasan Jam Absen Masuk
+        if ($currentTime < $startCheckIn) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Presensi masuk belum dibuka. Silakan presensi jam ' . substr($startCheckIn, 0, 5) . ' - ' . substr($endCheckIn, 0, 5) . '.'
+            ], 422);
+        }
+
+        if ($currentTime > $endCheckIn) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Waktu presensi masuk telah ditutup (Batas maksimal jam ' . substr($endCheckIn, 0, 5) . ').'
+            ], 422);
+        }
+
+        // Simpan Presensi Masuk Baru
+        $scheduledCheckIn = Carbon::parse($today . ' ' . $schedule->check_in_time);
         $isLate = $now->greaterThan($scheduledCheckIn);
         $status = $isLate ? 'late' : 'present';
 
         AttendanceRecord::create([
             'teacher_id'          => $teacher->id,
             'shift_assignment_id' => $shiftAssignment->id,
-            'date'                => $attendanceDate,
-            'check_in_time'       => $now->toDateTimeString(), // Menggunakan format Datetime utuh
+            'date'                => $today,
+            'check_in_time'       => $now->toDateTimeString(),
             'status'              => $status,
         ]);
 
@@ -221,8 +246,19 @@ class AttendanceController extends Controller
         $totalLate    = $attendances->where('status', 'late')->count();
         $totalRecords = $attendances->count();
 
+        $apelAttendances = ApelAttendance::where('teacher_id', $teacher->id)
+            ->whereMonth('date', $month)
+            ->whereYear('date', $year)
+            ->orderBy('date', 'desc')
+            ->get();
+
+        $totalApelPresent = $apelAttendances->where('status', 'present')->count();
+        $totalApelLate    = $apelAttendances->where('status', 'late')->count();
+        $totalApelRecords = $apelAttendances->count();
+
         return view('attendance.my_history', compact(
-            'teacher', 'attendances', 'month', 'year', 'totalPresent', 'totalLate', 'totalRecords'
+            'teacher', 'attendances', 'month', 'year', 'totalPresent', 'totalLate', 'totalRecords',
+            'apelAttendances', 'totalApelPresent', 'totalApelLate', 'totalApelRecords'
         ));
     }
 

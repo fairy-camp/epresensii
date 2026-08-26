@@ -1,6 +1,7 @@
 @extends('layouts.main')
 
-@section('title', 'Penugasan Shift Guru')
+@section('title', 'Penugasan Shift')
+@section('page-title', 'Penugasan Shift')
 
 @push('styles')
 <!-- DataTables Bootstrap 5 CSS -->

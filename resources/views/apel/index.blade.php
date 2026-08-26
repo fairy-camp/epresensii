@@ -1,6 +1,7 @@
 @extends('layouts.main')
 
 @section('title', 'Data Presensi Apel Pagi')
+@section('page-title', 'Data Presensi Apel Pagi')
 
 @push('styles')
 <!-- DataTables CSS -->
