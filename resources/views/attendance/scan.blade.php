@@ -64,12 +64,12 @@
             overflow: hidden;
         }
 
-        /* Digital Clock Banner */
+        /* Digital Clock Banner (Ramping & Kompak) */
         .clock-card {
             background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            border-radius: 12px;
-            padding: 8px 12px;
-            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.2);
+            border-radius: 8px;
+            padding: 3px 8px; /* Mengurangi padding vertikal */
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
             flex-shrink: 0;
         }
 
@@ -169,6 +169,14 @@
             text-decoration: none;
         }
 
+        /* Styling Soft Placeholder Input NIP */
+        #manual_code::placeholder {
+            font-size: 13px;
+            font-weight: 400;
+            color: #94a3b8; /* Warna abu-abu soft */
+            opacity: 1;    /* Menjaga konsistensi warna di browser Firefox */
+        }
+
         .scan-popup-card {
             width: 100%;
             max-width: 320px;
@@ -212,10 +220,10 @@
     <!-- Tombol Pengalih Mode Presensi (Harian vs Apel) -->
     <div class="px-3 pt-2 bg-white border-bottom">
         <div class="btn-group w-100 shadow-sm mb-2" role="group">
-            <a href="{{ route('attendance.scan') }}" class="btn btn-sm btn-primary active fw-bold py-1">
+            <a href="{{ route('attendance.scan') }}" class="btn btn-sm btn-primary active fw-bold py-1 w-50">
                 <i class="fas fa-clock me-1"></i> Presensi Harian
             </a>
-            <a href="{{ route('apel.scan') }}" class="btn btn-sm btn-outline-warning text-dark fw-bold py-1">
+            <a href="{{ route('apel.scan') }}" class="btn btn-sm btn-outline-warning text-dark fw-bold py-1 w-50">
                 <i class="fas fa-flag me-1"></i> Apel Pagi
             </a>
         </div>
@@ -225,10 +233,10 @@
     <main class="app-body">
         <!-- Jam Digital & Tanggal Banner -->
         <div class="clock-card text-center">
-            <div class="d-flex align-items-center justify-content-center gap-2">
-                <span id="realtime-clock" class="fs-5 fw-bold text-white tracking-wide">00:00:00</span>
-                <span class="text-white-50 small">|</span>
-                <span id="realtime-date" class="small text-white-50 fw-medium">Senin, 1 Jan 2026</span>
+            <div class="d-flex align-items-center justify-content-center gap-2" style="font-size: 12px;">
+                <span id="realtime-clock" class="fw-bold text-white">00:00:00</span>
+                <span class="text-white-50">|</span>
+                <span id="realtime-date" class="text-white-50 fw-medium">Senin, 1 Jan 2026</span>
             </div>
         </div>
 
@@ -290,7 +298,7 @@
                     <form id="formManualPresensi">
                         <div class="mb-3">
                             <label for="manual_code" class="form-label text-secondary small fw-medium">NIP Guru / Kode QR Card</label>
-                            <input type="text" id="manual_code" class="form-control form-control-lg bg-light text-dark border text-center" placeholder="Ketik NIP / Kode QR" required autocomplete="off">
+                            <input type="text" id="manual_code" class="form-control bg-light text-dark border text-center py-2" placeholder="Ketik NIP / Kode QR" required autocomplete="off">
                         </div>
                         <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm">
                             <i class="fas fa-paper-plane me-1"></i> Kirim Presensi
@@ -540,13 +548,14 @@
                 });
             }
 
-            // E. Inisialisasi Scanner Kamera
+            // E. Inisialisasi Scanner Kamera (Area Kotak Maksimal)
             const html5QrCode = new Html5Qrcode("reader");
             const config = { 
                 fps: 15, 
                 qrbox: function(viewfinderWidth, viewfinderHeight) {
+                    // Menggunakan 95% dari lebar/tinggi terkecil container
                     const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-                    const size = Math.floor(minEdge * 0.75);
+                    const size = Math.floor(minEdge * 0.90);
                     return { width: size, height: size };
                 }
             };

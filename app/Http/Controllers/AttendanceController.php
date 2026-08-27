@@ -103,31 +103,40 @@ class AttendanceController extends Controller
         $currentTime = $now->format('H:i:s');
         $today = $now->toDateString();
 
-        // Mengambil batas waktu dari jadwal kerja (atau memakai nilai default)
-        $startCheckIn  = $schedule->start_check_in_time  ?? '06:30:00';
-        $endCheckIn    = $schedule->end_check_in_time    ?? '07:00:00';
-        $startCheckOut = $schedule->start_check_out_time ?? '15:00:00';
-        $endCheckOut   = $schedule->end_check_out_time   ?? '17:00:00';
+        // Batas waktu dari jadwal kerja
+        $startCheckIn  = $schedule->start_check_in_time  ?: '06:30:00';
+        $endCheckIn    = $schedule->end_check_in_time    ?: '07:00:00';
+        $startCheckOut = $schedule->start_check_out_time ?: '15:00:00';
+        $endCheckOut   = $schedule->end_check_out_time   ?: '17:00:00';
 
-        // 3. Cek Status Presensi Terbuka (Sudah Absen Masuk, Belum Absen Pulang)
-        $openAttendance = AttendanceRecord::where('teacher_id', $teacher->id)
+        // Cari record presensi khusus HARI INI
+        $todayAttendance = AttendanceRecord::where('teacher_id', $teacher->id)
             ->where('shift_assignment_id', $shiftAssignment->id)
-            ->whereNull('check_out_time')
-            ->latest()
+            ->whereDate('date', $today)
             ->first();
 
-        if ($openAttendance) {
-            // User scan ulang saat jam presensi pulang belum dibuka
+        // KONDISI 1: Sudah Presensi Datang DAN Sudah Presensi Pulang
+        if ($todayAttendance && !is_null($todayAttendance->check_out_time)) {
+            return response()->json([
+                'status'  => 'warning',
+                'teacher' => $teacher->full_name,
+                'message' => 'Anda sudah melakukan presensi datang dan pulang hari ini.'
+            ], 200);
+        }
+
+        // KONDISI 2: Sudah Presensi Datang, Tapi Belum Presensi Pulang
+        if ($todayAttendance && is_null($todayAttendance->check_out_time)) {
+            // Belum saatnya presensi pulang
             if ($currentTime < $startCheckOut) {
-                $checkInFormatted = Carbon::parse($openAttendance->check_in_time)->format('H:i');
+                $checkInFormatted = Carbon::parse($todayAttendance->check_in_time)->format('H:i');
                 return response()->json([
                     'status'  => 'warning',
                     'teacher' => $teacher->full_name,
-                    'message' => "Anda sudah melakukan presensi masuk hari ini pada jam {$checkInFormatted}. Presensi pulang baru dibuka jam " . substr($startCheckOut, 0, 5) . '.'
+                    'message' => "Anda sudah presensi datang hari ini (jam {$checkInFormatted}). Presensi pulang baru dibuka jam " . substr($startCheckOut, 0, 5) . '.'
                 ], 200);
             }
 
-            // User scan saat batas jam pulang sudah lewati
+            // Batas jam pulang lewat
             if ($currentTime > $endCheckOut) {
                 return response()->json([
                     'status'  => 'error',
@@ -135,8 +144,8 @@ class AttendanceController extends Controller
                 ], 422);
             }
 
-            // Proses Presensi Pulang
-            $openAttendance->update([
+            // Di dalam jendela jam pulang -> Eksekusi Presensi Pulang
+            $todayAttendance->update([
                 'check_out_time' => $now->toDateTimeString(),
             ]);
 
@@ -150,36 +159,22 @@ class AttendanceController extends Controller
             ]);
         }
 
-        // 4. Cek Jika Sudah Pernah Selesai Presensi Lengkap (Masuk & Pulang)
-        $existingAttendance = AttendanceRecord::where('teacher_id', $teacher->id)
-            ->where('shift_assignment_id', $shiftAssignment->id)
-            ->whereDate('date', $today)
-            ->first();
-
-        if ($existingAttendance && !is_null($existingAttendance->check_out_time)) {
-            return response()->json([
-                'status'  => 'warning',
-                'teacher' => $teacher->full_name,
-                'message' => 'Anda sudah melakukan presensi masuk dan pulang untuk hari ini.'
-            ], 200);
-        }
-
-        // 5. Cek Pembatasan Jam Absen Masuk
+        // KONDISI 3: Belum Presensi Datang Hari Ini
         if ($currentTime < $startCheckIn) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Presensi masuk belum dibuka. Silakan presensi jam ' . substr($startCheckIn, 0, 5) . ' - ' . substr($endCheckIn, 0, 5) . '.'
+                'message' => 'Presensi datang belum dibuka. Silakan presensi jam ' . substr($startCheckIn, 0, 5) . ' - ' . substr($endCheckIn, 0, 5) . '.'
             ], 422);
         }
 
         if ($currentTime > $endCheckIn) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Waktu presensi masuk telah ditutup (Batas maksimal jam ' . substr($endCheckIn, 0, 5) . ').'
+                'message' => 'Waktu presensi datang telah ditutup (Batas maksimal jam ' . substr($endCheckIn, 0, 5) . ').'
             ], 422);
         }
 
-        // Simpan Presensi Masuk Baru
+        // Simpan Presensi Datang Baru
         $scheduledCheckIn = Carbon::parse($today . ' ' . $schedule->check_in_time);
         $isLate = $now->greaterThan($scheduledCheckIn);
         $status = $isLate ? 'late' : 'present';

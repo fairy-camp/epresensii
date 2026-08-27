@@ -188,6 +188,7 @@
                                             data-id="{{ $teacher->id }}" 
                                             data-name="{{ $teacher->full_name }}" 
                                             data-email="{{ $teacher->user->email ?? '-' }}"
+                                            data-nip="{{ $teacher->nip ?? '-' }}"
                                             title="Download Kartu Presensi">
                                         <i class="fas fa-id-card"></i>
                                     </button>
@@ -260,7 +261,7 @@
         <div class="modal-content">
             <div class="modal-header py-2 bg-light">
                 <h6 class="modal-title fw-bold text-dark" id="modalCardLabel">
-                    <i class="fas fa-id-card me-2 text-primary"></i>Kartu Presensi Pegawai
+                    <i class="fas fa-id-card me-2 text-primary"></i>Kartu Presensi Guru dan Karyawan
                 </h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -271,7 +272,7 @@
                     
                     <div class="identity-box-modal">
                         <div class="name" id="cardTeacherName">-</div>
-                        <div class="id-number" id="cardTeacherId">email : - | id : -</div>
+                        <div class="id-number" id="cardTeacherId">email : - | kode : -</div>
                     </div>
                     <div class="qr-container-modal" id="cardQrContainer">
                         <!-- QR Code di-inject lewat JS -->
@@ -536,12 +537,13 @@
             const id = $(this).data('id');
             const name = $(this).data('name');
             const email = $(this).data('email');
+            const nip = $(this).data('nip') || '-';
             const qrSvg = $('#qr-svg-' + id).html();
 
             currentTeacherName = name;
 
             $('#cardTeacherName').text(name).attr('title', name);
-            $('#cardTeacherId').text('email : ' + email + '  |  id : ' + id);
+            $('#cardTeacherId').text('email : ' + email + '  |  kode : ' + nip);
             $('#cardQrContainer').html(qrSvg);
         });
 

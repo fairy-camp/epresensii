@@ -62,12 +62,12 @@
             overflow: hidden;
         }
 
-        /* Banner Clock khusus Tema Apel Pagi */
+        /* Banner Clock khusus Tema Apel Pagi (Ramping & Kompak) */
         .clock-card-apel {
             background: linear-gradient(135deg, #d97706, #b45309);
-            border-radius: 12px;
-            padding: 8px 12px;
-            box-shadow: 0 4px 15px rgba(217, 119, 6, 0.25);
+            border-radius: 8px;
+            padding: 3px 8px;
+            box-shadow: 0 2px 8px rgba(217, 119, 6, 0.2);
             flex-shrink: 0;
         }
 
@@ -168,6 +168,14 @@
             text-decoration: none;
         }
 
+        /* Styling Soft Placeholder Input NIP */
+        #manual_code::placeholder {
+            font-size: 13px;
+            font-weight: 400;
+            color: #94a3b8;
+            opacity: 1;
+        }
+
         @keyframes popupScale {
             from { transform: scale(0.8); opacity: 0; }
             to { transform: scale(1); opacity: 1; }
@@ -198,13 +206,13 @@
         </form>
     </header>
 
-    <!-- Navigation Switcher Mode Presensi -->
+    <!-- Navigation Switcher Mode Presensi (Ukuran Sama Besar w-50) -->
     <div class="px-3 pt-2 bg-white border-bottom">
         <div class="btn-group w-100 shadow-sm mb-2" role="group">
-            <a href="{{ route('attendance.scan') }}" class="btn btn-sm btn-outline-primary fw-bold py-1">
+            <a href="{{ route('attendance.scan') }}" class="btn btn-sm btn-outline-primary fw-bold py-1 w-50">
                 <i class="fas fa-clock me-1"></i> Presensi Harian
             </a>
-            <a href="{{ route('apel.scan') }}" class="btn btn-sm btn-warning active text-dark fw-bold py-1">
+            <a href="{{ route('apel.scan') }}" class="btn btn-sm btn-warning active text-dark fw-bold py-1 w-50">
                 <i class="fas fa-flag me-1"></i> Apel Pagi
             </a>
         </div>
@@ -212,12 +220,12 @@
 
     <!-- Content Area -->
     <main class="app-body">
-        <!-- Banner Jam & Jadwal Apel -->
+        <!-- Banner Jam & Jadwal Apel (Tampilan Ramping) -->
         <div class="clock-card-apel text-center">
-            <div class="d-flex align-items-center justify-content-center gap-2">
-                <span id="realtime-clock" class="fs-5 fw-bold text-white tracking-wide">00:00:00</span>
-                <span class="text-white-50 small">|</span>
-                <span id="realtime-date" class="small text-white-50 fw-medium">Senin, 1 Jan 2026</span>
+            <div class="d-flex align-items-center justify-content-center gap-2" style="font-size: 12px;">
+                <span id="realtime-clock" class="fw-bold text-white">00:00:00</span>
+                <span class="text-white-50">|</span>
+                <span id="realtime-date" class="text-white-50 fw-medium">Senin, 1 Jan 2026</span>
             </div>
             <div class="badge bg-light text-dark fw-bold mt-1" style="font-size: 10px;">
                 <i class="fas fa-bullhorn text-warning me-1"></i> Jam Apel: 06:45 - 07:00 WIB
@@ -279,7 +287,7 @@
                     <form id="formManualPresensi">
                         <div class="mb-3">
                             <label for="manual_code" class="form-label text-secondary small fw-medium">NIP Guru / Kode QR Card</label>
-                            <input type="text" id="manual_code" class="form-control form-control-lg bg-light text-dark border text-center" placeholder="Ketik NIP / Kode QR" required autocomplete="off">
+                            <input type="text" id="manual_code" class="form-control bg-light text-dark border text-center py-2" placeholder="Ketik NIP / Kode QR" required autocomplete="off">
                         </div>
                         <button type="submit" class="btn btn-warning btn-lg w-100 fw-bold shadow-sm">
                             <i class="fas fa-paper-plane me-1"></i> Kirim Presensi Apel
@@ -304,6 +312,28 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // 1. Web Audio API Sintetis untuk Beep Instan
+        function playInstantBeep() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.15);
+            } catch (e) {
+                // Ignore audio policy error
+            }
+        }
+
+        // 2. Text to Speech
         function speakText(text) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
@@ -315,6 +345,7 @@
             }
         }
 
+        // 3. Realtime Clock
         function updateClock() {
             const now = new Date();
             const hours = String(now.getHours()).padStart(2, '0');
@@ -419,8 +450,8 @@
                 isProcessing = true;
                 showPopup('bg-white border text-dark shadow-sm', '<i class="fas fa-spinner fa-spin fa-3x text-warning"></i>', 'Memproses Presensi Apel...');
 
-                let beep = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-                beep.play().catch(() => {});
+                // Bunyikan Beep Instan Web Audio API
+                playInstantBeep();
 
                 // Target Endpoint Khusus APEL
                 fetch("{{ route('apel.scan.process') }}", {
@@ -481,13 +512,13 @@
                 });
             }
 
-            // Inisialisasi Scanner Kamera
+            // Inisialisasi Scanner Kamera (Ukuran Area 90%)
             const html5QrCode = new Html5Qrcode("reader");
             const config = { 
                 fps: 15, 
                 qrbox: function(viewfinderWidth, viewfinderHeight) {
                     const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-                    const size = Math.floor(minEdge * 0.75);
+                    const size = Math.floor(minEdge * 0.90);
                     return { width: size, height: size };
                 }
             };
