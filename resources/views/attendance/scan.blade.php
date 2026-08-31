@@ -68,7 +68,7 @@
         .clock-card {
             background: linear-gradient(135deg, #2563eb, #1d4ed8);
             border-radius: 8px;
-            padding: 3px 8px; /* Mengurangi padding vertikal */
+            padding: 3px 8px;
             box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
             flex-shrink: 0;
         }
@@ -173,8 +173,8 @@
         #manual_code::placeholder {
             font-size: 13px;
             font-weight: 400;
-            color: #94a3b8; /* Warna abu-abu soft */
-            opacity: 1;    /* Menjaga konsistensi warna di browser Firefox */
+            color: #94a3b8;
+            opacity: 1;
         }
 
         .scan-popup-card {
@@ -245,24 +245,6 @@
             <i class="fas fa-spinner fa-spin me-1 text-primary"></i> Mendapatkan koordinat GPS...
         </div>
 
-        <!-- Fallback GPS Manual -->
-        <div id="gps-manual" class="d-none flex-shrink-0">
-            <div class="card bg-white border p-2 rounded-3 shadow-sm">
-                <small class="text-warning d-block mb-1" style="font-size: 11px;"><i class="fas fa-exclamation-triangle me-1"></i> Mode GPS Manual:</small>
-                <form id="formManualGps">
-                    <div class="row g-1 mb-1">
-                        <div class="col-6">
-                            <input type="text" id="manual_lat" class="form-control form-control-sm bg-light text-dark border py-1" placeholder="Latitude (-6.xxx)" style="font-size: 11px;">
-                        </div>
-                        <div class="col-6">
-                            <input type="text" id="manual_lng" class="form-control form-control-sm bg-light text-dark border py-1" placeholder="Longitude (106.xxx)" style="font-size: 11px;">
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-xs btn-primary w-100 py-1 fw-medium" style="font-size: 11px;">Simpan Koordinat</button>
-                </form>
-            </div>
-        </div>
-
         <!-- Tab Navigasi: Scanner vs Manual -->
         <ul class="nav nav-pills nav-justified p-1 rounded-3 mb-0 flex-shrink-0" id="pills-tab" role="tablist">
             <li class="nav-item" role="presentation">
@@ -325,7 +307,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // 1. Fungsi Web Audio API Sintetis untuk Beep Instan (Tanpa Download File)
+        // 1. Fungsi Web Audio API Sintetis untuk Beep Instan
         function playInstantBeep() {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -333,26 +315,26 @@
                 const gainNode = audioCtx.createGain();
 
                 oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // Frekuensi 880 Hz (A5)
-                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); // Volume ringan
+                oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
 
                 oscillator.connect(gainNode);
                 gainNode.connect(audioCtx.destination);
 
                 oscillator.start();
-                oscillator.stop(audioCtx.currentTime + 0.15); // Durasi 150 milidetik
+                oscillator.stop(audioCtx.currentTime + 0.15);
             } catch (e) {
-                // Berjalan silent jika browser memblokir audio otomatis
+                // Silent error
             }
         }
 
-        // 2. Fungsi Text-to-Speech (Suara Bahasa Indonesia)
+        // 2. Fungsi Text-to-Speech
         function speakText(text) {
             if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel(); // Hentikan ucapan aktif
+                window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'id-ID'; // Bahasa Indonesia
-                utterance.rate = 0.95;    // Kecepatan normal
+                utterance.lang = 'id-ID';
+                utterance.rate = 0.95;
                 utterance.pitch = 1.0;
                 window.speechSynthesis.speak(utterance);
             }
@@ -385,10 +367,6 @@
 
             const formManual = document.getElementById('formManualPresensi');
             const manualCodeInput = document.getElementById('manual_code');
-            const gpsManualBox = document.getElementById('gps-manual');
-            const formManualGps = document.getElementById('formManualGps');
-            const manualLatInput = document.getElementById('manual_lat');
-            const manualLngInput = document.getElementById('manual_lng');
             const btnSwitchCamera = document.getElementById('btnSwitchCamera');
             const cameraLabel = document.getElementById('cameraLabel');
 
@@ -401,9 +379,11 @@
                 gpsStatus.innerHTML = html;
             }
 
-            function showGpsError(message) {
-                setGpsStatus("alert alert-danger py-1 px-2 mb-0 rounded-3 small flex-shrink-0 shadow-sm", `<i class="fas fa-exclamation-triangle me-1"></i> ${message}`);
-                gpsManualBox.classList.remove('d-none');
+            function showGpsError() {
+                setGpsStatus(
+                    "alert alert-danger py-1 px-2 mb-0 rounded-3 small flex-shrink-0 shadow-sm", 
+                    `<i class="fas fa-exclamation-triangle me-1"></i> Mohon aktifkan GPS`
+                );
             }
 
             function showPopup(cardClass, iconHtml, messageHtml) {
@@ -425,43 +405,29 @@
                     function(position) {
                         currentLat = position.coords.latitude;
                         currentLng = position.coords.longitude;
-                        setGpsStatus("alert alert-success py-1 px-2 mb-0 rounded-3 small flex-shrink-0 shadow-sm", `<i class="fas fa-check-circle me-1"></i> GPS Aktif (${currentLat.toFixed(5)}, ${currentLng.toFixed(5)})`);
-                        gpsManualBox.classList.add('d-none');
+                        setGpsStatus(
+                            "alert alert-success py-1 px-2 mb-0 rounded-3 small flex-shrink-0 shadow-sm", 
+                            `<i class="fas fa-check-circle me-1"></i> GPS Aktif (${currentLat.toFixed(5)}, ${currentLng.toFixed(5)})`
+                        );
                     },
                     function(error) {
-                        if (error.code === error.PERMISSION_DENIED) {
-                            showGpsError('Akses GPS ditolak browser. Izinkan lokasi di pengaturan HP.');
-                        } else {
-                            showGpsError('Sinyal GPS lemah atau tidak tersedia.');
-                        }
+                        currentLat = null;
+                        currentLng = null;
+                        showGpsError();
                     },
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
                 );
             } else {
-                setGpsStatus("alert alert-danger py-1 px-2 mb-0 rounded-3 small flex-shrink-0 shadow-sm", "Browser tidak mendukung Geolocation.");
+                showGpsError();
             }
 
-            // B. Manual GPS Submit
-            if (formManualGps) {
-                formManualGps.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    const lat = parseFloat(manualLatInput.value);
-                    const lng = parseFloat(manualLngInput.value);
-                    if (!isNaN(lat) && !isNaN(lng)) {
-                        currentLat = lat;
-                        currentLng = lng;
-                        setGpsStatus("alert alert-warning py-1 px-2 mb-0 rounded-3 small flex-shrink-0 shadow-sm", `<i class="fas fa-map-marker-alt me-1"></i> GPS Manual (${lat.toFixed(5)}, ${lat.toFixed(5)})`);
-                    }
-                });
-            }
-
-            // C. Eksekusi Kirim Presensi via AJAX dengan Suara
+            // B. Eksekusi Kirim Presensi via AJAX dengan Suara
             const qrCodeSuccessCallback = (decodedText) => {
                 if (isProcessing) return;
 
                 if (!currentLat || !currentLng) {
-                    showPopup('bg-danger text-white', '<i class="fas fa-location-slash fa-3x"></i>', 'Lokasi GPS Belum Didapatkan!');
-                    setTimeout(() => { hidePopup(); }, 1200);
+                    showPopup('bg-danger text-white', '<i class="fas fa-location-slash fa-3x"></i>', 'Mohon aktifkan GPS!');
+                    setTimeout(() => { hidePopup(); }, 1500);
                     return;
                 }
 
@@ -539,7 +505,7 @@
                 });
             };
 
-            // D. Listener Form Input Manual
+            // C. Listener Form Input Manual
             if (formManual) {
                 formManual.addEventListener('submit', function(e) {
                     e.preventDefault();
@@ -548,12 +514,11 @@
                 });
             }
 
-            // E. Inisialisasi Scanner Kamera (Area Kotak Maksimal)
+            // D. Inisialisasi Scanner Kamera
             const html5QrCode = new Html5Qrcode("reader");
             const config = { 
                 fps: 15, 
                 qrbox: function(viewfinderWidth, viewfinderHeight) {
-                    // Menggunakan 95% dari lebar/tinggi terkecil container
                     const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
                     const size = Math.floor(minEdge * 0.90);
                     return { width: size, height: size };
@@ -585,7 +550,7 @@
             updateCameraLabel();
             startScanner(currentFacingMode);
 
-            // F. Tombol Switch Kamera
+            // E. Tombol Switch Kamera
             if (btnSwitchCamera) {
                 btnSwitchCamera.addEventListener('click', function() {
                     if (isSwitchingCamera) return;

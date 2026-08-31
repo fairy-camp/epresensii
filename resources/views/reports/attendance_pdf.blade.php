@@ -44,7 +44,7 @@
             font-size: 5.5pt;
         }
         
-        /* Pengaturan Lebar Kolom Langsung di Th/Td */
+        /* Pengaturan Lebar Kolom */
         .col-no { width: 2%; }
         .col-nama { 
             width: 11%; 
@@ -57,8 +57,10 @@
         .col-tgl { width: 2.3%; }
         .col-total { width: 2.3%; font-weight: bold; font-size: 6pt; }
 
+        /* Warna Status Sel */
         .bg-sunday { background-color: #cbd5e1; font-weight: bold; }
         .bg-late { background-color: #fef08a; font-weight: bold; }
+        .bg-absent { background-color: #fca5a5; font-weight: bold; color: #991b1b; }
         
         .ttd-container {
             margin-top: 8px;
@@ -110,17 +112,24 @@
                                 $todayDate = \Carbon\Carbon::today()->toDateString();
                                 if ($dayInfo['date'] > $todayDate) {
                                     $displayText = '';
-                                } elseif (!$rec || is_null($rec->check_in_time)) {
+                                } elseif (!$rec) {
+                                    // Jika tidak ada data presensi pada tanggal tersebut
                                     $displayText = '-';
                                 } else {
-                                    $inTime = \Carbon\Carbon::parse($rec->check_in_time)->format('H:i');
+                                    // Ambil jam masuk & jam pulang (gunakan '-' jika null)
+                                    $inTime  = $rec->check_in_time ? \Carbon\Carbon::parse($rec->check_in_time)->format('H:i') : '-';
                                     $outTime = $rec->check_out_time ? \Carbon\Carbon::parse($rec->check_out_time)->format('H:i') : '-';
                                     
                                     $displayText = "{$inTime}<br>{$outTime}";
-                                    $totalPresensi++;
 
+                                    // Penyesuaian warna sel & perhitungan Total Presensi
                                     if ($rec->status === 'late') {
                                         $cellClass = 'bg-late';
+                                        $totalPresensi++;
+                                    } elseif ($rec->status === 'absent') {
+                                        $cellClass = 'bg-absent'; // Merah untuk Alfa / Tanpa Presensi Datang
+                                    } else {
+                                        $totalPresensi++;
                                     }
                                 }
                             }

@@ -72,6 +72,9 @@ Route::middleware('auth')->group(function () {
 
     // C. Akses Manajemen & Master Data (HANYA Super Admin & Admin)
     Route::middleware('role:super_admin,admin')->group(function () {
+        // Ubah Password Admin via Navbar
+        Route::put('/admin/password/update', [AuthController::class, 'updateAdminPassword'])->name('admin.password.update');
+
         // Master Teachers CRUD & Import CSV
         Route::post('/teachers', [TeacherController::class, 'store'])->name('teachers.store');
         Route::post('/teachers/import-csv', [TeacherController::class, 'importCsv'])->name('teachers.import-csv');
@@ -103,8 +106,9 @@ Route::middleware('auth')->group(function () {
         Route::put('/settings/school', [SchoolSettingController::class, 'update'])->name('settings.school.update');
     });
 
-    // D. Akses Histori Presensi Mandiri (Guru & Staf)
+    // D. Akses Histori Presensi Mandiri & Ubah Password (Guru & Staf)
     Route::middleware('role:guru,kepala_sekolah,waka,satpam,staff')->group(function () {
         Route::get('/my-attendance-history', [AttendanceController::class, 'myHistory'])->name('attendance.my-history');
+        Route::put('/my-history/password', [AttendanceController::class, 'updatePasswordSelf'])->name('password.update-self');
     });
 });

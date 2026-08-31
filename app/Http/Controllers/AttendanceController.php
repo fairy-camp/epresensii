@@ -9,6 +9,7 @@ use App\Models\SchoolSetting;
 use App\Models\Teacher;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cache;
 
 class AttendanceController extends Controller
@@ -160,6 +161,29 @@ class AttendanceController extends Controller
         }
 
         // KONDISI 3: Belum Presensi Datang Hari Ini
+
+        // A. Cek apakah scan dilakukan pada jendela jam PULANG (Tanpa Absen Datang)
+        if ($currentTime >= $startCheckOut && $currentTime <= $endCheckOut) {
+            AttendanceRecord::create([
+                'teacher_id'          => $teacher->id,
+                'shift_assignment_id' => $shiftAssignment->id,
+                'date'                => $today,
+                'check_in_time'       => null,
+                'check_out_time'      => $now->toDateTimeString(),
+                'status'              => 'absent',
+            ]);
+
+            return response()->json([
+                'status'   => 'success',
+                'type'     => 'pulang',
+                'message'  => 'Presensi PULANG Berhasil! (Tanpa Presensi Datang)',
+                'teacher'  => $teacher->full_name,
+                'time'     => $currentTime,
+                'distance' => round($distance) . ' meter'
+            ]);
+        }
+
+        // B. Cek Batas Waktu Jam Datang
         if ($currentTime < $startCheckIn) {
             return response()->json([
                 'status'  => 'error',
@@ -221,11 +245,15 @@ class AttendanceController extends Controller
     public function myHistory(Request $request)
     {
         $user = auth()->user();
-        $teacher = Teacher::where('user_id', $user->id)->first();
+        $teacher = Teacher::with(['activeQrCode', 'position'])->where('user_id', $user->id)->first();
 
         if (!$teacher) {
             return redirect()->back()->with('error', 'Data profil guru tidak terhubung dengan akun Anda.');
         }
+
+        $school = Cache::remember('school_setting', 86400, function () {
+            return SchoolSetting::first();
+        });
 
         $month = $request->input('month', Carbon::now()->format('m'));
         $year  = $request->input('year', Carbon::now()->format('Y'));
@@ -252,9 +280,36 @@ class AttendanceController extends Controller
         $totalApelRecords = $apelAttendances->count();
 
         return view('attendance.my_history', compact(
-            'teacher', 'attendances', 'month', 'year', 'totalPresent', 'totalLate', 'totalRecords',
+            'teacher', 'school', 'attendances', 'month', 'year', 'totalPresent', 'totalLate', 'totalRecords',
             'apelAttendances', 'totalApelPresent', 'totalApelLate', 'totalApelRecords'
         ));
+    }
+
+    public function updatePasswordSelf(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'password'         => 'required|string|min:6|confirmed',
+        ], [
+            'current_password.required' => 'Password saat ini wajib diisi.',
+            'password.required'         => 'Password baru wajib diisi.',
+            'password.min'              => 'Password baru minimal 6 karakter.',
+            'password.confirmed'        => 'Konfirmasi password baru tidak cocok.',
+        ]);
+
+        $user = auth()->user();
+
+        // Validasi apakah password saat ini sesuai
+        if (!Hash::check($request->current_password, $user->password)) {
+            return redirect()->back()->with('error', 'Password saat ini salah!');
+        }
+
+        // Update password baru
+        $user->update([
+            'password' => Hash::make($request->password),
+        ]);
+
+        return redirect()->back()->with('success', 'Password Anda berhasil diperbarui!');
     }
 
     public function index(Request $request)
@@ -284,10 +339,22 @@ class AttendanceController extends Controller
             'notes'          => 'nullable|string|max:255',
         ]);
 
+        // Ambil format tanggal (YYYY-MM-DD) dari data presensi
+        $dateStr = \Carbon\Carbon::parse($attendance->date)->format('Y-m-d');
+
+        // Gabungkan tanggal dengan jam dari input form
+        $checkInTime = $request->check_in_time 
+            ? $dateStr . ' ' . $request->check_in_time . ':00' 
+            : null;
+
+        $checkOutTime = $request->check_out_time 
+            ? $dateStr . ' ' . $request->check_out_time . ':00' 
+            : null;
+
         $attendance->update([
             'status'         => $request->status,
-            'check_in_time'  => $request->check_in_time,
-            'check_out_time' => $request->check_out_time,
+            'check_in_time'  => $checkInTime,
+            'check_out_time' => $checkOutTime,
             'notes'          => $request->notes,
         ]);
 

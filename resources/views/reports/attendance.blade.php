@@ -61,9 +61,10 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
             <div class="p-2 bg-light border rounded flex-grow-1">
                 <span class="fw-bold me-2" style="font-size: 12px;">Keterangan:</span>
-                <span class="badge bg-white text-dark border me-1">07:00 - 15:00 : Hadir Tepat Waktu</span>
-                <span class="badge bg-warning text-dark me-1">07:15 - 15:00 : Terlambat</span>
-                <span class="badge bg-secondary me-1">- : Libur (Minggu) / Tidak Hadir</span>
+                <span class="badge bg-white text-dark border me-1">Hadir Tepat Waktu</span>
+                <span class="badge bg-warning text-dark me-1">Terlambat</span>
+                <span class="badge bg-danger me-1">Tidak Absen Pagi</span>
+                <span class="badge bg-secondary me-1">- : Libur (Minggu)</span>
             </div>
 
             <!-- Input Pencarian Nama Guru / Karyawan -->
@@ -112,16 +113,23 @@
                                         $todayDate = \Carbon\Carbon::today()->toDateString();
                                         if ($dayInfo['date'] > $todayDate) {
                                             $displayText = '';
-                                        } elseif (!$rec || is_null($rec->check_in_time)) {
+                                        } elseif (!$rec) {
+                                            // Jika tidak ada record presensi sama sekali pada tanggal tersebut
                                             $displayText = '-';
                                         } else {
-                                            $inTime = \Carbon\Carbon::parse($rec->check_in_time)->format('H:i');
+                                            // Ambil jam masuk & jam pulang (gunakan '-' jika nilainya null)
+                                            $inTime  = $rec->check_in_time ? \Carbon\Carbon::parse($rec->check_in_time)->format('H:i') : '-';
                                             $outTime = $rec->check_out_time ? \Carbon\Carbon::parse($rec->check_out_time)->format('H:i') : '-';
                                             $displayText = "{$inTime} - {$outTime}";
-                                            $totalPresensi++;
 
+                                            // Penyesuaian warna sel dan perhitungan Total Presensi
                                             if ($rec->status === 'late') {
                                                 $cellClass = 'bg-warning text-dark fw-bold';
+                                                $totalPresensi++;
+                                            } elseif ($rec->status === 'absent') {
+                                                $cellClass = 'bg-danger text-white fw-bold'; // Memberi warna merah untuk status Alfa
+                                            } else {
+                                                $totalPresensi++;
                                             }
                                         }
                                     }

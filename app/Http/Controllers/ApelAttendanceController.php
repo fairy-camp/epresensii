@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\ApelAttendance;
 use App\Models\Teacher;
-use App\Models\QrCode; // <--- Pastikan Model QrCode Di-import
+use App\Models\QrCode;
 use App\Models\SchoolSetting;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -44,14 +44,14 @@ class ApelAttendanceController extends Controller
             if (str_starts_with($code, '{') && str_ends_with($code, '}')) {
                 $json = json_decode($code, true);
                 if (is_array($json)) {
-                    $code = $json['code'] ?? $json['nip'] ?? $json['nik'] ?? $json['nuptk'] ?? $json['npy'] ?? $json['id'] ?? $code;
+                    $code = $json['code'] ?? $json['nip'] ?? $json['nik'] ?? $json['nuptk'] ?? $json['npy'] ?? $code;
                 }
             }
 
             // 1. Pencarian Guru (Mendukung Tabel QrCode DAN Tabel Teachers)
             $teacher = null;
 
-            // A. Cari dari tabel qr_codes terlebih dahulu (Sama dengan Presensi Utama)
+            // A. Cari dari tabel qr_codes terlebih dahulu
             $qr = QrCode::with('teacher')
                 ->where('code', $code)
                 ->where('is_active', true)
@@ -60,13 +60,13 @@ class ApelAttendanceController extends Controller
             if ($qr && $qr->teacher) {
                 $teacher = $qr->teacher;
             } else {
-                // B. Jika bukan Kode QR, cari langsung berdasarkan NIP/NIK/NUPTK/NPY di tabel teachers
-                $teacher = Teacher::where('nip', $code)
-                    ->orWhere('nik', $code)
-                    ->orWhere('nuptk', $code)
-                    ->orWhere('npy', $code)
-                    ->orWhere('id', $code)
-                    ->first();
+                // B. Jika bukan Kode QR, cari HANYA berdasarkan NIP / NIK / NUPTK / NPY (Tanpa ID Database)
+                $teacher = Teacher::where(function ($query) use ($code) {
+                    $query->where('nip', $code)
+                          ->orWhere('nik', $code)
+                          ->orWhere('nuptk', $code)
+                          ->orWhere('npy', $code);
+                })->first();
             }
 
             if (!$teacher || !$teacher->is_active) {

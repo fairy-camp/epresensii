@@ -34,16 +34,31 @@
     .form-floating > label {
         transition: opacity 0.25s ease-in-out, transform 0.25s ease-in-out !important;
     }
+
+    /* 6. Penyesuaian khusus mode HP (Layar <= 576px) */
+    @media (max-width: 576px) {
+        .login-card {
+            margin-left: 16px !important;
+            margin-right: 16px !important;
+            width: calc(100% - 32px) !important;
+            padding-top: 16px !important;
+            padding-bottom: 28px !important;
+        }
+
+        .login-logo {
+            height: 110px !important;
+        }
+    }
 </style>
 @endpush
 
 @section('content')
-<div class="card border-0 shadow-lg p-4" style="width: 100%; max-width: 400px; border-radius: 12px;">
-    <div class="card-body">
+<div class="card border-0 shadow-lg pt-3 pb-4 px-3 px-md-4 login-card" style="width: 100%; max-width: 400px; border-radius: 12px;">
+    <div class="card-body p-0">
         <!-- Brand / Header Logo -->
         <div class="text-center mb-4">
-            <img src="{{ asset('img/logo.png') }}" alt="Logo Sekolah" class="mb-0" style="height: 150px; width: auto; max-width: 100%; object-fit: contain;">
-            <h4 class="fw-bold mb-0">E-Presensi</h4>
+            <img src="{{ asset('img/logo.png') }}" alt="Logo Sekolah" class="mb-0 login-logo" style="height: 140px; width: auto; max-width: 100%; object-fit: contain;">
+            <h4 class="fw-bold mb-0 fs-4">E-Presensi</h4>
             <p class="text-muted small mb-0">SMK Syafi'i Akrom</p>
         </div>
 
@@ -69,7 +84,7 @@
                 <span class="input-group-text"><i class="fas fa-envelope"></i></span>
                 <div class="form-floating">
                     <input type="email" class="form-control" id="email" name="email" value="{{ old('email') }}" placeholder="nama@email.com" required autofocus>
-                    <label for="email">Alamat Email</label>
+                    <label for="email">Email</label>
                 </div>
             </div>
 
@@ -94,6 +109,13 @@
                 <i class="fas fa-sign-in-alt me-1"></i> Masuk
             </button>
         </form>
+
+        <!-- Footer Card (Powered By) -->
+        <div class="text-center mt-4 pt-1">
+            <small class="text-muted" style="font-size: 11px;">
+                Powered by <a href="https://rplsmksa.com/" target="_blank" class="text-decoration-none fw-semibold text-danger">Codepelita RPL SMKSA</a>
+            </small>
+        </div>
     </div>
 </div>
 

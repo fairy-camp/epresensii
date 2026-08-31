@@ -227,32 +227,11 @@
                 <span class="text-white-50">|</span>
                 <span id="realtime-date" class="text-white-50 fw-medium">Senin, 1 Jan 2026</span>
             </div>
-            <div class="badge bg-light text-dark fw-bold mt-1" style="font-size: 10px;">
-                <i class="fas fa-bullhorn text-warning me-1"></i> Jam Apel: 06:45 - 07:00 WIB
-            </div>
         </div>
 
         <!-- Status GPS Badge -->
         <div id="gps-status" class="alert alert-light border text-secondary text-center py-1 px-2 mb-0 rounded-3 small flex-shrink-0 shadow-sm" style="font-size: 11px;">
             <i class="fas fa-spinner fa-spin me-1 text-warning"></i> Mendapatkan koordinat GPS...
-        </div>
-
-        <!-- Fallback GPS Manual -->
-        <div id="gps-manual" class="d-none flex-shrink-0">
-            <div class="card bg-white border p-2 rounded-3 shadow-sm">
-                <small class="text-warning d-block mb-1" style="font-size: 11px;"><i class="fas fa-exclamation-triangle me-1"></i> Mode GPS Manual:</small>
-                <form id="formManualGps">
-                    <div class="row g-1 mb-1">
-                        <div class="col-6">
-                            <input type="text" id="manual_lat" class="form-control form-control-sm bg-light text-dark border py-1" placeholder="Latitude" style="font-size: 11px;">
-                        </div>
-                        <div class="col-6">
-                            <input type="text" id="manual_lng" class="form-control form-control-sm bg-light text-dark border py-1" placeholder="Longitude" style="font-size: 11px;">
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-xs btn-warning w-100 py-1 fw-medium" style="font-size: 11px;">Simpan Koordinat</button>
-                </form>
-            </div>
         </div>
 
         <!-- Tab Navigasi Scanner vs Manual -->
@@ -306,7 +285,7 @@
     <!-- Footer Mobile -->
     <footer class="bottom-card">
         <small class="text-secondary d-block" style="font-size: 11px;">
-            <i class="fas fa-map-marker-alt text-danger me-1"></i> Radius Sekolah: <strong>{{ $school->geofence_radius ?? 50 }} Meter</strong> | E-Presensi &copy; {{ date('Y') }}
+            <i class="fas fa-map-marker-alt text-danger me-1"></i> Radius Sekolah: <strong>{{ $school->geofence_radius ?? 50 }} Meter</strong> | E-Presensi SMKSA &copy; {{ date('Y') }}
         </small>
     </footer>
 
@@ -371,10 +350,6 @@
 
             const formManual = document.getElementById('formManualPresensi');
             const manualCodeInput = document.getElementById('manual_code');
-            const gpsManualBox = document.getElementById('gps-manual');
-            const formManualGps = document.getElementById('formManualGps');
-            const manualLatInput = document.getElementById('manual_lat');
-            const manualLngInput = document.getElementById('manual_lng');
             const btnSwitchCamera = document.getElementById('btnSwitchCamera');
             const cameraLabel = document.getElementById('cameraLabel');
 
@@ -387,9 +362,11 @@
                 gpsStatus.innerHTML = html;
             }
 
-            function showGpsError(message) {
-                setGpsStatus("alert alert-danger py-1 px-2 mb-0 rounded-3 small flex-shrink-0 shadow-sm", `<i class="fas fa-exclamation-triangle me-1"></i> ${message}`);
-                gpsManualBox.classList.remove('d-none');
+            function showGpsError() {
+                setGpsStatus(
+                    "alert alert-danger py-1 px-2 mb-0 rounded-3 small flex-shrink-0 shadow-sm", 
+                    `<i class="fas fa-exclamation-triangle me-1"></i> Mohon aktifkan GPS`
+                );
             }
 
             function showPopup(cardClass, iconHtml, messageHtml) {
@@ -411,30 +388,20 @@
                     function(position) {
                         currentLat = position.coords.latitude;
                         currentLng = position.coords.longitude;
-                        setGpsStatus("alert alert-success py-1 px-2 mb-0 rounded-3 small flex-shrink-0 shadow-sm", `<i class="fas fa-check-circle me-1"></i> GPS Aktif (${currentLat.toFixed(5)}, ${currentLng.toFixed(5)})`);
-                        gpsManualBox.classList.add('d-none');
+                        setGpsStatus(
+                            "alert alert-success py-1 px-2 mb-0 rounded-3 small flex-shrink-0 shadow-sm", 
+                            `<i class="fas fa-check-circle me-1"></i> GPS Aktif (${currentLat.toFixed(5)}, ${currentLng.toFixed(5)})`
+                        );
                     },
                     function(error) {
-                        showGpsError('Sinyal GPS lemah atau tidak diizinkan.');
+                        currentLat = null;
+                        currentLng = null;
+                        showGpsError();
                     },
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
                 );
             } else {
-                setGpsStatus("alert alert-danger py-1 px-2 mb-0 rounded-3 small flex-shrink-0 shadow-sm", "Browser tidak mendukung Geolocation.");
-            }
-
-            // Manual GPS Submit
-            if (formManualGps) {
-                formManualGps.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    const lat = parseFloat(manualLatInput.value);
-                    const lng = parseFloat(manualLngInput.value);
-                    if (!isNaN(lat) && !isNaN(lng)) {
-                        currentLat = lat;
-                        currentLng = lng;
-                        setGpsStatus("alert alert-warning py-1 px-2 mb-0 rounded-3 small flex-shrink-0 shadow-sm", `<i class="fas fa-map-marker-alt me-1"></i> GPS Manual (${lat.toFixed(5)}, ${lng.toFixed(5)})`);
-                    }
-                });
+                showGpsError();
             }
 
             // Eksekusi AJAX Presensi APEL PAGI
@@ -442,8 +409,8 @@
                 if (isProcessing) return;
 
                 if (!currentLat || !currentLng) {
-                    showPopup('bg-danger text-white', '<i class="fas fa-location-slash fa-3x"></i>', 'Lokasi GPS Belum Didapatkan!');
-                    setTimeout(() => { hidePopup(); }, 1200);
+                    showPopup('bg-danger text-white', '<i class="fas fa-location-slash fa-3x"></i>', 'Mohon aktifkan GPS!');
+                    setTimeout(() => { hidePopup(); }, 1500);
                     return;
                 }
 
@@ -479,7 +446,21 @@
 
                     if (data.status === 'success') {
                         speakText(`Presensi Apel Pagi Berhasil. ${teacherName}`);
-                        showPopup('bg-success text-white', '<i class="fas fa-check-circle fa-3x"></i>', `${data.message}<br><small class="fw-normal fs-6">${teacherName} (${data.time ?? ''})</small>`);
+
+                        // Cek status keterlambatan
+                        if (data.is_late) {
+                            showPopup(
+                                'bg-warning text-dark', 
+                                '<i class="fas fa-clock fa-3x"></i>', 
+                                `${data.message}<br><small class="fw-normal fs-6">${teacherName} (${data.time ?? ''})</small>`
+                            );
+                        } else {
+                            showPopup(
+                                'bg-success text-white', 
+                                '<i class="fas fa-check-circle fa-3x"></i>', 
+                                `${data.message}<br><small class="fw-normal fs-6">${teacherName} (${data.time ?? ''})</small>`
+                            );
+                        }
                     } else if (data.status === 'warning') {
                         speakText(data.message);
                         showPopup('bg-warning text-dark', '<i class="fas fa-exclamation-circle fa-3x"></i>', data.message);

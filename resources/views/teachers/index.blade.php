@@ -194,12 +194,12 @@
                                     </button>
 
                                     <!-- Tombol Regenerate QR -->
-                                    <form action="{{ route('teachers.regenerate-qr', $teacher->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Regenerate QR Code baru?')">
+                                    <!-- <form action="{{ route('teachers.regenerate-qr', $teacher->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Regenerate QR Code baru?')">
                                         @csrf
                                         <button type="submit" class="btn btn-sm btn-outline-secondary me-1" title="Regenerate QR">
                                             <i class="fas fa-sync"></i>
                                         </button>
-                                    </form>
+                                    </form> -->
 
                                     <!-- Tombol Hapus -->
                                     <form action="{{ route('teachers.destroy', $teacher->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus {{ $teacher->full_name }} beserta akun login-nya?')">
